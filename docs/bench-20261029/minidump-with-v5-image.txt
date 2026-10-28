@@ -1,0 +1,272 @@
+Opened log file 'C:\Users\k\Desktop\mmf-bin-converter\tools\flex-x32dbg\local-session\handoff-verification\minidump-with-v5-image.txt'
+
+Microsoft (R) Windows Debugger Version 10.0.19041.685 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'
+
+Loading Dump File [C:\Users\k\Desktop\mmf-bin-converter\tools\flex-x32dbg\local-session\UPGDSED-HyperHide-private\docs\bench-20261029\102826-7203-01.dmp]
+Mini Kernel Dump File: Only registers and stack trace are available
+
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Kernel.natvis'
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+OK                                             C:\Users\k\Desktop\mmf-bin-converter\tools\flex-x32dbg\local-session\handoff-verification\v5
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*C:\Users\k\Desktop\mmf-bin-converter\tools\flex-x32dbg\local-session\symbols*https://msdl.microsoft.com/download/symbols
+Symbol search path is: srv*C:\Users\k\Desktop\mmf-bin-converter\tools\flex-x32dbg\local-session\symbols*https://msdl.microsoft.com/download/symbols
+Executable search path is: C:\Users\k\Desktop\mmf-bin-converter\tools\flex-x32dbg\local-session\handoff-verification\v5
+Windows 10 Kernel Version 19041 MP (4 procs) Free x64
+Product: WinNt, suite: TerminalServer SingleUserTS
+Built by: 19041.1.amd64fre.vb_release.191206-1406
+Machine Name:
+Kernel base = 0xfffff800`52800000 PsLoadedModuleList = 0xfffff800`5342a3d0
+Debug session time: Wed Oct 28 21:38:27.882 2026 (UTC + 1:00)
+System Uptime: 0 days 0:40:40.668
+Loading Kernel Symbols
+...............................................................
+................................................................
+................................................................
+................
+Loading User Symbols
+Loading unloaded module list
+........
+For analysis of this file, run !analyze -v
+2: kd> .cxr 0xffffb9002021afc0; kv; .fnent HyperHideDrv+0x3b26; uf HyperHideDrv+0x3b26; q
+rax=0000000000000080 rbx=0000000000000096 rcx=0075006200650044
+rdx=ffffb9002021ba40 rsi=000000000528fa78 rdi=000000000528fa70
+rip=fffff80052e6f1e3 rsp=ffffb9002021ba08 rbp=0000000000000001
+ r8=0000000000000000  r9=0000000000000016 r10=fffff80082aec100
+r11=ffffb9002021b9e0 r12=0000000000394000 r13=00000000000ffda0
+r14=0000000000000002 r15=0000000000000000
+iopl=0         nv up ei pl nz ac pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00010212
+nt!RtlEqualUnicodeString+0x43:
+fffff800`52e6f1e3 483908          cmp     qword ptr [rax],rcx ds:002b:00000000`00000080=????????????????
+  *** Stack trace for last set context - .thread/.cxr resets it
+Child-SP          RetAddr           : Args to Child                                                           : Call Site
+ffffb900`2021ba08 fffff800`82ae3b26 : ffffe704`034a8080 00000000`0528fa78 00000000`0528fa70 00000000`00000080 : nt!RtlEqualUnicodeString+0x43
+ffffb900`2021ba10 fffff800`52c13008 : 00000000`00000000 00000000`00000000 00000000`00000000 ffffe704`00000000 : HyperHideDrv+0x3b26
+ffffb900`2021ba90 00000000`02e225fe : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!KiSystemServiceCopyEnd+0x28 (TrapFrame @ ffffb900`2021bb00)
+00000000`001ff3c8 00000000`00000000 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : 0x2e225fe
+Debugger function entry 000001da`a7e2da48 for:
+
+BeginAddress      = 00000000`00003a30
+EndAddress        = 00000000`00003bec
+UnwindInfoAddress = 00000000`0000d0d8
+
+Unwind info at fffff800`82aed0d8, 12 bytes
+  version 1, flags 0, prolog d, codes 7
+  00: offs d, unwind op 2, op info 8	UWOP_ALLOC_SMALL.
+  01: offs 9, unwind op 0, op info f	UWOP_PUSH_NONVOL reg: r15.
+  02: offs 7, unwind op 0, op info e	UWOP_PUSH_NONVOL reg: r14.
+  03: offs 5, unwind op 0, op info 7	UWOP_PUSH_NONVOL reg: rdi.
+  04: offs 4, unwind op 0, op info 6	UWOP_PUSH_NONVOL reg: rsi.
+  05: offs 3, unwind op 0, op info 5	UWOP_PUSH_NONVOL reg: rbp.
+  06: offs 2, unwind op 0, op info 3	UWOP_PUSH_NONVOL reg: rbx.
+HyperHideDrv+0x3a30:
+fffff800`82ae3a30 4053            push    rbx
+fffff800`82ae3a32 55              push    rbp
+fffff800`82ae3a33 56              push    rsi
+fffff800`82ae3a34 57              push    rdi
+fffff800`82ae3a35 4156            push    r14
+fffff800`82ae3a37 4157            push    r15
+fffff800`82ae3a39 4883ec48        sub     rsp,48h
+fffff800`82ae3a3d 488bb424a0000000 mov     rsi,qword ptr [rsp+0A0h]
+fffff800`82ae3a45 498bf8          mov     rdi,r8
+fffff800`82ae3a48 488b0571a70000  mov     rax,qword ptr [HyperHideDrv+0xe1c0 (fffff800`82aee1c0)]
+fffff800`82ae3a4f 448bf2          mov     r14d,edx
+fffff800`82ae3a52 4889742420      mov     qword ptr [rsp+20h],rsi
+fffff800`82ae3a57 ffd0            call    rax
+fffff800`82ae3a59 448bf8          mov     r15d,eax
+fffff800`82ae3a5c ff15e6770000    call    qword ptr [HyperHideDrv+0xb248 (fffff800`82aeb248)]
+fffff800`82ae3a62 488d0defa50000  lea     rcx,[HyperHideDrv+0xe058 (fffff800`82aee058)]
+fffff800`82ae3a69 4032ed          xor     bpl,bpl
+fffff800`82ae3a6c 488bd8          mov     rbx,rax
+fffff800`82ae3a6f ff1573760000    call    qword ptr [HyperHideDrv+0xb0e8 (fffff800`82aeb0e8)]
+fffff800`82ae3a75 488b1514a60000  mov     rdx,qword ptr [HyperHideDrv+0xe090 (fffff800`82aee090)]
+fffff800`82ae3a7c 488d050da60000  lea     rax,[HyperHideDrv+0xe090 (fffff800`82aee090)]
+fffff800`82ae3a83 483bd0          cmp     rdx,rax
+fffff800`82ae3a86 743d            je      HyperHideDrv+0x3ac5 (fffff800`82ae3ac5)
+
+HyperHideDrv+0x3a88:
+fffff800`82ae3a88 0f1f840000000000 nop     dword ptr [rax+rax]
+
+HyperHideDrv+0x3a90:
+fffff800`82ae3a90 48399aa8000000  cmp     qword ptr [rdx+0A8h],rbx
+fffff800`82ae3a97 7425            je      HyperHideDrv+0x3abe (fffff800`82ae3abe)
+
+HyperHideDrv+0x3a99:
+fffff800`82ae3a99 488b12          mov     rdx,qword ptr [rdx]
+fffff800`82ae3a9c 483bd0          cmp     rdx,rax
+fffff800`82ae3a9f 75ef            jne     HyperHideDrv+0x3a90 (fffff800`82ae3a90)
+
+HyperHideDrv+0x3aa1:
+fffff800`82ae3aa1 488d0db0a50000  lea     rcx,[HyperHideDrv+0xe058 (fffff800`82aee058)]
+fffff800`82ae3aa8 ff152a760000    call    qword ptr [HyperHideDrv+0xb0d8 (fffff800`82aeb0d8)]
+fffff800`82ae3aae 418bc7          mov     eax,r15d
+fffff800`82ae3ab1 4883c448        add     rsp,48h
+fffff800`82ae3ab5 415f            pop     r15
+fffff800`82ae3ab7 415e            pop     r14
+fffff800`82ae3ab9 5f              pop     rdi
+fffff800`82ae3aba 5e              pop     rsi
+fffff800`82ae3abb 5d              pop     rbp
+fffff800`82ae3abc 5b              pop     rbx
+fffff800`82ae3abd c3              ret
+
+HyperHideDrv+0x3abe:
+fffff800`82ae3abe 0fb6aac4000000  movzx   ebp,byte ptr [rdx+0C4h]
+
+HyperHideDrv+0x3ac5:
+fffff800`82ae3ac5 488d0d8ca50000  lea     rcx,[HyperHideDrv+0xe058 (fffff800`82aee058)]
+fffff800`82ae3acc ff1506760000    call    qword ptr [HyperHideDrv+0xb0d8 (fffff800`82aeb0d8)]
+fffff800`82ae3ad2 4080fd01        cmp     bpl,1
+fffff800`82ae3ad6 0f8500010000    jne     HyperHideDrv+0x3bdc (fffff800`82ae3bdc)
+
+HyperHideDrv+0x3adc:
+fffff800`82ae3adc 4585ff          test    r15d,r15d
+fffff800`82ae3adf 0f88f7000000    js      HyperHideDrv+0x3bdc (fffff800`82ae3bdc)
+
+HyperHideDrv+0x3ae5:
+fffff800`82ae3ae5 ff156d760000    call    qword ptr [HyperHideDrv+0xb158 (fffff800`82aeb158)]
+fffff800`82ae3aeb 403ac5          cmp     al,bpl
+fffff800`82ae3aee 0f85e8000000    jne     HyperHideDrv+0x3bdc (fffff800`82ae3bdc)
+
+HyperHideDrv+0x3af4:
+fffff800`82ae3af4 4885ff          test    rdi,rdi
+fffff800`82ae3af7 0f84df000000    je      HyperHideDrv+0x3bdc (fffff800`82ae3bdc)
+
+HyperHideDrv+0x3afd:
+fffff800`82ae3afd 4183fe02        cmp     r14d,2
+fffff800`82ae3b01 7567            jne     HyperHideDrv+0x3b6a (fffff800`82ae3b6a)
+
+HyperHideDrv+0x3b03:
+fffff800`82ae3b03 488d15f6850000  lea     rdx,[HyperHideDrv+0xc100 (fffff800`82aec100)]
+fffff800`82ae3b0a 488d4c2430      lea     rcx,[rsp+30h]
+fffff800`82ae3b0f ff1513750000    call    qword ptr [HyperHideDrv+0xb028 (fffff800`82aeb028)]
+fffff800`82ae3b15 4533c0          xor     r8d,r8d
+fffff800`82ae3b18 488d542430      lea     rdx,[rsp+30h]
+fffff800`82ae3b1d 488bcf          mov     rcx,rdi
+fffff800`82ae3b20 ff15da750000    call    qword ptr [HyperHideDrv+0xb100 (fffff800`82aeb100)]
+fffff800`82ae3b26 403ac5          cmp     al,bpl
+fffff800`82ae3b29 0f85ad000000    jne     HyperHideDrv+0x3bdc (fffff800`82ae3bdc)
+
+HyperHideDrv+0x3b2f:
+fffff800`82ae3b2f 8b051fa50000    mov     eax,dword ptr [HyperHideDrv+0xe054 (fffff800`82aee054)]
+fffff800`82ae3b35 4885f6          test    rsi,rsi
+fffff800`82ae3b38 741a            je      HyperHideDrv+0x3b54 (fffff800`82ae3b54)
+
+HyperHideDrv+0x3b3a:
+fffff800`82ae3b3a 8b0e            mov     ecx,dword ptr [rsi]
+fffff800`82ae3b3c 294710          sub     dword ptr [rdi+10h],eax
+fffff800`82ae3b3f 294714          sub     dword ptr [rdi+14h],eax
+fffff800`82ae3b42 418bc7          mov     eax,r15d
+fffff800`82ae3b45 890e            mov     dword ptr [rsi],ecx
+fffff800`82ae3b47 4883c448        add     rsp,48h
+fffff800`82ae3b4b 415f            pop     r15
+fffff800`82ae3b4d 415e            pop     r14
+fffff800`82ae3b4f 5f              pop     rdi
+fffff800`82ae3b50 5e              pop     rsi
+fffff800`82ae3b51 5d              pop     rbp
+fffff800`82ae3b52 5b              pop     rbx
+fffff800`82ae3b53 c3              ret
+
+HyperHideDrv+0x3b54:
+fffff800`82ae3b54 294710          sub     dword ptr [rdi+10h],eax
+fffff800`82ae3b57 294714          sub     dword ptr [rdi+14h],eax
+fffff800`82ae3b5a 418bc7          mov     eax,r15d
+fffff800`82ae3b5d 4883c448        add     rsp,48h
+fffff800`82ae3b61 415f            pop     r15
+fffff800`82ae3b63 415e            pop     r14
+fffff800`82ae3b65 5f              pop     rdi
+fffff800`82ae3b66 5e              pop     rsi
+fffff800`82ae3b67 5d              pop     rbp
+fffff800`82ae3b68 5b              pop     rbx
+fffff800`82ae3b69 c3              ret
+
+HyperHideDrv+0x3b6a:
+fffff800`82ae3b6a 4183fe03        cmp     r14d,3
+fffff800`82ae3b6e 756c            jne     HyperHideDrv+0x3bdc (fffff800`82ae3bdc)
+
+HyperHideDrv+0x3b70:
+fffff800`82ae3b70 488d1589850000  lea     rdx,[HyperHideDrv+0xc100 (fffff800`82aec100)]
+fffff800`82ae3b77 488d4c2430      lea     rcx,[rsp+30h]
+fffff800`82ae3b7c ff15a6740000    call    qword ptr [HyperHideDrv+0xb028 (fffff800`82aeb028)]
+fffff800`82ae3b82 33ed            xor     ebp,ebp
+fffff800`82ae3b84 488d5f08        lea     rbx,[rdi+8]
+fffff800`82ae3b88 8b3f            mov     edi,dword ptr [rdi]
+fffff800`82ae3b8a 4885f6          test    rsi,rsi
+fffff800`82ae3b8d 7402            je      HyperHideDrv+0x3b91 (fffff800`82ae3b91)
+
+HyperHideDrv+0x3b8f:
+fffff800`82ae3b8f 8b2e            mov     ebp,dword ptr [rsi]
+
+HyperHideDrv+0x3b91:
+fffff800`82ae3b91 85ff            test    edi,edi
+fffff800`82ae3b93 7440            je      HyperHideDrv+0x3bd5 (fffff800`82ae3bd5)
+
+HyperHideDrv+0x3b95:
+fffff800`82ae3b95 4533c0          xor     r8d,r8d
+fffff800`82ae3b98 488d542430      lea     rdx,[rsp+30h]
+fffff800`82ae3b9d 488bcb          mov     rcx,rbx
+fffff800`82ae3ba0 ff155a750000    call    qword ptr [HyperHideDrv+0xb100 (fffff800`82aeb100)]
+fffff800`82ae3ba6 3c01            cmp     al,1
+fffff800`82ae3ba8 750c            jne     HyperHideDrv+0x3bb6 (fffff800`82ae3bb6)
+
+HyperHideDrv+0x3baa:
+fffff800`82ae3baa 8b05a4a40000    mov     eax,dword ptr [HyperHideDrv+0xe054 (fffff800`82aee054)]
+fffff800`82ae3bb0 294310          sub     dword ptr [rbx+10h],eax
+fffff800`82ae3bb3 294314          sub     dword ptr [rbx+14h],eax
+
+HyperHideDrv+0x3bb6:
+fffff800`82ae3bb6 0fb75302        movzx   edx,word ptr [rbx+2]
+fffff800`82ae3bba 48035308        add     rdx,qword ptr [rbx+8]
+fffff800`82ae3bbe 488bc2          mov     rax,rdx
+fffff800`82ae3bc1 4883e0f8        and     rax,0FFFFFFFFFFFFFFF8h
+fffff800`82ae3bc5 483bc2          cmp     rax,rdx
+fffff800`82ae3bc8 488d5808        lea     rbx,[rax+8]
+fffff800`82ae3bcc 480f44d8        cmove   rbx,rax
+fffff800`82ae3bd0 83c7ff          add     edi,0FFFFFFFFh
+fffff800`82ae3bd3 75c0            jne     HyperHideDrv+0x3b95 (fffff800`82ae3b95)
+
+HyperHideDrv+0x3bd5:
+fffff800`82ae3bd5 4885f6          test    rsi,rsi
+fffff800`82ae3bd8 7402            je      HyperHideDrv+0x3bdc (fffff800`82ae3bdc)
+
+HyperHideDrv+0x3bda:
+fffff800`82ae3bda 892e            mov     dword ptr [rsi],ebp
+
+HyperHideDrv+0x3bdc:
+fffff800`82ae3bdc 418bc7          mov     eax,r15d
+fffff800`82ae3bdf 4883c448        add     rsp,48h
+fffff800`82ae3be3 415f            pop     r15
+fffff800`82ae3be5 415e            pop     r14
+fffff800`82ae3be7 5f              pop     rdi
+fffff800`82ae3be8 5e              pop     rsi
+fffff800`82ae3be9 5d              pop     rbp
+fffff800`82ae3bea 5b              pop     rbx
+fffff800`82ae3beb c3              ret
+quit:
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Kernel.natvis'

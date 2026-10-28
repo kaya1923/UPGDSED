@@ -1,0 +1,2 @@
+# Preserve handoff artifact bytes so SHA256SUMS also verifies on other systems.
+docs/bench-20261029/** -text

@@ -1,0 +1,60 @@
+{
+    "Time":  "2026-10-29T00:00:07.3362947+01:00",
+    "Services":  [
+                     {
+                         "Name":  "airhv",
+                         "Status":  "Stopped"
+                     },
+                     {
+                         "Name":  "HyperHideDrv",
+                         "Status":  "Stopped"
+                     }
+                 ],
+    "Flex":  [
+                 {
+                     "Id":  16152,
+                     "ProcessName":  "flex",
+                     "MainWindowTitle":  "",
+                     "Responding":  true
+                 },
+                 {
+                     "Id":  3200,
+                     "ProcessName":  "flex_ui",
+                     "MainWindowTitle":  "",
+                     "Responding":  true
+                 },
+                 {
+                     "Id":  13672,
+                     "ProcessName":  "flex_ui",
+                     "MainWindowTitle":  "",
+                     "Responding":  true
+                 },
+                 {
+                     "Id":  15708,
+                     "ProcessName":  "flex_ui",
+                     "MainWindowTitle":  "",
+                     "Responding":  true
+                 },
+                 {
+                     "Id":  15956,
+                     "ProcessName":  "flex_ui",
+                     "MainWindowTitle":  "MagicMotorSport Flex",
+                     "Responding":  true
+                 },
+                 {
+                     "Id":  15976,
+                     "ProcessName":  "flex_ui",
+                     "MainWindowTitle":  "",
+                     "Responding":  true
+                 },
+                 {
+                     "Id":  16232,
+                     "ProcessName":  "flex_ui",
+                     "MainWindowTitle":  "",
+                     "Responding":  true
+                 }
+             ],
+    "Dialogs":  [
+
+                ]
+}

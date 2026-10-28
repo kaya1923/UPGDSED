@@ -18,6 +18,9 @@
 
 # Crash dumps and downloaded symbol caches may contain machine-specific data.
 *.dmp
+# Owner-authorized private bench handoff: only these two captured minidumps.
+!docs/bench-20261029/102826-7203-01.dmp
+!docs/bench-20261029/102826-6828-01.dmp
 # The curated root symbols/ directory is tracked; ad-hoc caches remain local.
 third_party/**/symbols/
 !symbols/

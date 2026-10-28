@@ -1,0 +1,242 @@
+Opened log file '.\tools\flex-x32dbg\local-session\crash-20261028\midday-dump-analysis.txt'
+
+Microsoft (R) Windows Debugger Version 10.0.19041.685 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'
+
+Loading Dump File [C:\Users\k\Desktop\mmf-bin-converter\tools\flex-x32dbg\local-session\crash-20261028\102826-6828-01.dmp]
+Mini Kernel Dump File: Only registers and stack trace are available
+
+NatVis script successfully loaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Kernel.natvis'
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*C:\Users\k\Desktop\mmf-bin-converter\tools\flex-x32dbg\local-session\symbols*https://msdl.microsoft.com/download/symbols
+Symbol search path is: srv*C:\Users\k\Desktop\mmf-bin-converter\tools\flex-x32dbg\local-session\symbols*https://msdl.microsoft.com/download/symbols
+Executable search path is:
+Windows 10 Kernel Version 19041 MP (4 procs) Free x64
+Product: WinNt, suite: TerminalServer SingleUserTS
+Built by: 19041.1.amd64fre.vb_release.191206-1406
+Machine Name:
+Kernel base = 0xfffff807`15400000 PsLoadedModuleList = 0xfffff807`1602a3d0
+Debug session time: Wed Oct 28 12:20:12.663 2026 (UTC + 1:00)
+System Uptime: 0 days 0:34:28.431
+Loading Kernel Symbols
+...............................................................
+................................................................
+................................................................
+...............
+Loading User Symbols
+Loading unloaded module list
+................
+For analysis of this file, run !analyze -v
+2: kd> !analyze -v; .cxr 0xffff820784a6efc0; kv; lmvm HyperHideDrv; q
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+SYSTEM_SERVICE_EXCEPTION (3b)
+An exception happened while executing a system service routine.
+Arguments:
+Arg1: 00000000c0000005, Exception code that caused the bugcheck
+Arg2: fffff80715a6f1e3, Address of the instruction which caused the bugcheck
+Arg3: ffff820784a6efc0, Address of the context record for the exception that caused the bugcheck
+Arg4: 0000000000000000, zero.
+
+Debugging Details:
+------------------
+
+*** WARNING: Unable to verify timestamp for HyperHideDrv.sys
+
+KEY_VALUES_STRING: 1
+
+    Key  : Analysis.CPU.Sec
+    Value: 4
+
+    Key  : Analysis.DebugAnalysisProvider.CPP
+    Value: Create: 8007007e on KAYAS-HP-DEBUG
+
+    Key  : Analysis.DebugData
+    Value: CreateObject
+
+    Key  : Analysis.DebugModel
+    Value: CreateObject
+
+    Key  : Analysis.Elapsed.Sec
+    Value: 7
+
+    Key  : Analysis.Memory.CommitPeak.Mb
+    Value: 70
+
+    Key  : Analysis.System
+    Value: CreateObject
+
+
+BUGCHECK_CODE:  3b
+
+BUGCHECK_P1: c0000005
+
+BUGCHECK_P2: fffff80715a6f1e3
+
+BUGCHECK_P3: ffff820784a6efc0
+
+BUGCHECK_P4: 0
+
+CONTEXT:  ffff820784a6efc0 -- (.cxr 0xffff820784a6efc0)
+.cxr 0xffff820784a6efc0
+rax=0000000000000080 rbx=0000000000000096 rcx=0075006200650044
+rdx=ffff820784a6fa40 rsi=0000000005670120 rdi=0000000005670118
+rip=fffff80715a6f1e3 rsp=ffff820784a6fa08 rbp=0000000000000001
+ r8=0000000000000000  r9=0000000000000016 r10=fffff8074376c100
+r11=ffff820784a6f9e0 r12=00000000052ca000 r13=00000000051dfda0
+r14=0000000000000002 r15=0000000000000000
+iopl=0         nv up ei pl nz ac pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00010212
+nt!RtlEqualUnicodeString+0x43:
+fffff807`15a6f1e3 483908          cmp     qword ptr [rax],rcx ds:002b:00000000`00000080=????????????????
+.cxr
+Resetting default scope
+
+BLACKBOXBSD: 1 (!blackboxbsd)
+
+
+BLACKBOXNTFS: 1 (!blackboxntfs)
+
+
+BLACKBOXPNP: 1 (!blackboxpnp)
+
+
+BLACKBOXWINLOGON: 1
+
+CUSTOMER_CRASH_COUNT:  1
+
+PROCESS_NAME:  flex.exe
+
+STACK_TEXT:
+ffff8207`84a6fa08 fffff807`43763b26 : ffff838c`eebae080 00000000`05670120 00000000`05670118 00000000`00000080 : nt!RtlEqualUnicodeString+0x43
+ffff8207`84a6fa10 ffff838c`eebae080 : 00000000`05670120 00000000`05670118 00000000`00000080 00000000`05670120 : HyperHideDrv+0x3b26
+ffff8207`84a6fa18 00000000`05670120 : 00000000`05670118 00000000`00000080 00000000`05670120 fffff580`000175f0 : 0xffff838c`eebae080
+ffff8207`84a6fa20 00000000`05670118 : 00000000`00000080 00000000`05670120 fffff580`000175f0 00000000`00180016 : 0x5670120
+ffff8207`84a6fa28 00000000`00000080 : 00000000`05670120 fffff580`000175f0 00000000`00180016 fffff807`4376c100 : 0x5670118
+ffff8207`84a6fa30 00000000`05670120 : fffff580`000175f0 00000000`00180016 fffff807`4376c100 00000000`77904660 : 0x80
+ffff8207`84a6fa38 fffff580`000175f0 : 00000000`00180016 fffff807`4376c100 00000000`77904660 00000000`77904660 : 0x5670120
+ffff8207`84a6fa40 00000000`00180016 : fffff807`4376c100 00000000`77904660 00000000`77904660 00000000`051de930 : 0xfffff580`000175f0
+ffff8207`84a6fa48 fffff807`4376c100 : 00000000`77904660 00000000`77904660 00000000`051de930 ffff8207`84a6faa8 : 0x180016
+ffff8207`84a6fa50 00000000`77904660 : 00000000`77904660 00000000`051de930 ffff8207`84a6faa8 00000000`054fee38 : HyperHideDrv+0xc100
+ffff8207`84a6fa58 00000000`77904660 : 00000000`051de930 ffff8207`84a6faa8 00000000`054fee38 ffff8207`84a6fb80 : 0x77904660
+ffff8207`84a6fa60 00000000`051de930 : ffff8207`84a6faa8 00000000`054fee38 ffff8207`84a6fb80 ffff838c`eeabf080 : 0x77904660
+ffff8207`84a6fa68 ffff8207`84a6faa8 : 00000000`054fee38 ffff8207`84a6fb80 ffff838c`eeabf080 fffff807`15813008 : 0x51de930
+ffff8207`84a6fa70 00000000`054fee38 : ffff8207`84a6fb80 ffff838c`eeabf080 fffff807`15813008 00000000`00000000 : 0xffff8207`84a6faa8
+ffff8207`84a6fa78 ffff8207`84a6fb80 : ffff838c`eeabf080 fffff807`15813008 00000000`00000000 00000000`00000001 : 0x54fee38
+ffff8207`84a6fa80 ffff838c`eeabf080 : fffff807`15813008 00000000`00000000 00000000`00000001 00000000`00000000 : 0xffff8207`84a6fb80
+ffff8207`84a6fa88 fffff807`15813008 : 00000000`00000000 00000000`00000001 00000000`00000000 ffffd101`00000000 : 0xffff838c`eeabf080
+ffff8207`84a6fa90 00000000`00000000 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!KiSystemServiceCopyEnd+0x28
+
+
+SYMBOL_NAME:  HyperHideDrv+3b26
+
+MODULE_NAME: HyperHideDrv
+
+IMAGE_NAME:  HyperHideDrv.sys
+
+STACK_COMMAND:  .cxr 0xffff820784a6efc0 ; kb
+
+BUCKET_ID_FUNC_OFFSET:  3b26
+
+FAILURE_BUCKET_ID:  0x3B_c0000005_HyperHideDrv!unknown_function
+
+OS_VERSION:  10.0.19041.1
+
+BUILDLAB_STR:  vb_release
+
+OSPLATFORM_TYPE:  x64
+
+OSNAME:  Windows 10
+
+FAILURE_ID_HASH:  {fc93472a-0c0f-1b8a-f21c-d48c3bae1639}
+
+Followup:     MachineOwner
+---------
+
+rax=0000000000000080 rbx=0000000000000096 rcx=0075006200650044
+rdx=ffff820784a6fa40 rsi=0000000005670120 rdi=0000000005670118
+rip=fffff80715a6f1e3 rsp=ffff820784a6fa08 rbp=0000000000000001
+ r8=0000000000000000  r9=0000000000000016 r10=fffff8074376c100
+r11=ffff820784a6f9e0 r12=00000000052ca000 r13=00000000051dfda0
+r14=0000000000000002 r15=0000000000000000
+iopl=0         nv up ei pl nz ac pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00010212
+nt!RtlEqualUnicodeString+0x43:
+fffff807`15a6f1e3 483908          cmp     qword ptr [rax],rcx ds:002b:00000000`00000080=????????????????
+  *** Stack trace for last set context - .thread/.cxr resets it
+Child-SP          RetAddr           : Args to Child                                                           : Call Site
+ffff8207`84a6fa08 fffff807`43763b26 : ffff838c`eebae080 00000000`05670120 00000000`05670118 00000000`00000080 : nt!RtlEqualUnicodeString+0x43
+ffff8207`84a6fa10 ffff838c`eebae080 : 00000000`05670120 00000000`05670118 00000000`00000080 00000000`05670120 : HyperHideDrv+0x3b26
+ffff8207`84a6fa18 00000000`05670120 : 00000000`05670118 00000000`00000080 00000000`05670120 fffff580`000175f0 : 0xffff838c`eebae080
+ffff8207`84a6fa20 00000000`05670118 : 00000000`00000080 00000000`05670120 fffff580`000175f0 00000000`00180016 : 0x5670120
+ffff8207`84a6fa28 00000000`00000080 : 00000000`05670120 fffff580`000175f0 00000000`00180016 fffff807`4376c100 : 0x5670118
+ffff8207`84a6fa30 00000000`05670120 : fffff580`000175f0 00000000`00180016 fffff807`4376c100 00000000`77904660 : 0x80
+ffff8207`84a6fa38 fffff580`000175f0 : 00000000`00180016 fffff807`4376c100 00000000`77904660 00000000`77904660 : 0x5670120
+ffff8207`84a6fa40 00000000`00180016 : fffff807`4376c100 00000000`77904660 00000000`77904660 00000000`051de930 : 0xfffff580`000175f0
+ffff8207`84a6fa48 fffff807`4376c100 : 00000000`77904660 00000000`77904660 00000000`051de930 ffff8207`84a6faa8 : 0x180016
+ffff8207`84a6fa50 00000000`77904660 : 00000000`77904660 00000000`051de930 ffff8207`84a6faa8 00000000`054fee38 : HyperHideDrv+0xc100
+ffff8207`84a6fa58 00000000`77904660 : 00000000`051de930 ffff8207`84a6faa8 00000000`054fee38 ffff8207`84a6fb80 : 0x77904660
+ffff8207`84a6fa60 00000000`051de930 : ffff8207`84a6faa8 00000000`054fee38 ffff8207`84a6fb80 ffff838c`eeabf080 : 0x77904660
+ffff8207`84a6fa68 ffff8207`84a6faa8 : 00000000`054fee38 ffff8207`84a6fb80 ffff838c`eeabf080 fffff807`15813008 : 0x51de930
+ffff8207`84a6fa70 00000000`054fee38 : ffff8207`84a6fb80 ffff838c`eeabf080 fffff807`15813008 00000000`00000000 : 0xffff8207`84a6faa8
+ffff8207`84a6fa78 ffff8207`84a6fb80 : ffff838c`eeabf080 fffff807`15813008 00000000`00000000 00000000`00000001 : 0x54fee38
+ffff8207`84a6fa80 ffff838c`eeabf080 : fffff807`15813008 00000000`00000000 00000000`00000001 00000000`00000000 : 0xffff8207`84a6fb80
+ffff8207`84a6fa88 fffff807`15813008 : 00000000`00000000 00000000`00000001 00000000`00000000 ffffd101`00000000 : 0xffff838c`eeabf080
+ffff8207`84a6fa90 00000000`00000000 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!KiSystemServiceCopyEnd+0x28
+start             end                 module name
+fffff807`43760000 fffff807`43772000   HyperHideDrv T (no symbols)
+    Loaded symbol image file: HyperHideDrv.sys
+    Image path: \??\C:\Windows\System32\drivers\HyperHideDrv.sys
+    Image name: HyperHideDrv.sys
+    Timestamp:        Wed Oct 28 12:08:34 2026 (6AE1D7B2)
+    CheckSum:         0000F6CD
+    ImageSize:        00012000
+    Translations:     0000.04b0 0000.04e4 0409.04b0 0409.04e4
+    Information from resource tables:
+
+Unloaded modules:
+fffff807`43720000 fffff807`43733000   HyperHideDrv
+    Timestamp: unavailable (00000000)
+    Checksum:  00000000
+    ImageSize:  00013000
+fffff807`436e0000 fffff807`436f3000   HyperHideDrv
+    Timestamp: unavailable (00000000)
+    Checksum:  00000000
+    ImageSize:  00013000
+fffff807`436a0000 fffff807`436b3000   HyperHideDrv
+    Timestamp: unavailable (00000000)
+    Checksum:  00000000
+    ImageSize:  00013000
+fffff807`43660000 fffff807`43673000   HyperHideDrv
+    Timestamp: unavailable (00000000)
+    Checksum:  00000000
+    ImageSize:  00013000
+quit:
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Kernel.natvis'

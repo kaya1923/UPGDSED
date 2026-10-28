@@ -1,0 +1,103 @@
+Arbeite im Repository https://github.com/kaya1923/UPGDSED-HyperHide-private.
+Ziel: einen gezielten HyperHideDrv-Fix auf dem Build-PC vorbereiten und bauen.
+Keine Treiber auf dem Build-PC laden; keine BCD-, Kernel-, DSE- oder
+Signaturoptionen aendern. Runtime-Tests erfolgen spaeter auf der HP-Bench.
+
+Zuerst docs/HANDOFF_HYPERHIDE_V5_V6.md und vorhandene AGENTS.md lesen.
+Von der Bench gepruefter Repository-Stand:
+57643d5b3d1f085b35b7a92e9fcb894490539cfd, Branch master.
+Vor Arbeiten aktuelle lokale Aenderungen und Branch pruefen, nichts verwerfen.
+
+WICHTIG ZUR BASIS:
+vendor/HyperHide enthaelt in diesem Stand bereits v6-Aenderungen.
+Fuer den isolierten Crash-Fix den v5-Quellstand aus
+bin/HyperHide/known-good/HyperHide-v5-source-KNOWN-GOOD.zip verwenden.
+ZIP-SHA256: 5ECD3971AA889F71D8605AACE70BF4287A40DC2ED4DA1C8997C4F7C9EB066ACD.
+V5-/known-good-Artefakte unveraendert lassen; in eigener Arbeitskopie arbeiten.
+Die Bezeichnung known-good bestaetigt nur die Treiberinitialisierung,
+nicht fehlerfreien fruehen Flex-Start oder stabile Debug-Hooks.
+
+NEUE DUMP-EVIDENZ VON DER BENCH:
+HP EliteBook 840 G1, Intel i5-4300U, Win10 22H2 Build 19045,
+Kernel 10.0.19041.7802, UPGDSED-Kernelalias ntkrnlmp.exe.
+Minidump 102826-7203-01.dmp; Crash 28.10.2026 21:38:27.882 CET.
+0x3B SYSTEM_SERVICE_EXCEPTION, Exception 0xC0000005, Prozess flex.exe.
+nt!RtlEqualUnicodeString+0x43 liest von 0x80.
+Aufrufer HyperHideDrv+0x3B26, Funktionsanfang +0x3A30.
+Die vollstaendige Disassemblierung identifiziert HookedNtQueryObject,
+ObjectTypeInformation (Klasse 2), Vergleich mit L"DebugObject".
+Originalstatus 0. Unwind-Flags der Hook-Funktion: 0, kein eigener SEH-Handler.
+Der Mittagsdump 102826-6828-01.dmp zeigt denselben Fehler und denselben Build.
+
+Register aus dem Hook-Prolog/Fehlerkontext:
+RDI = ObjectInformation = 0x0528FA70
+RSI = ReturnLength      = 0x0528FA78
+R14D = ObjectInformationClass = 2
+R15D = Originalstatus = 0
+RAX = gelesener TypeName.Buffer = 0x80
+ReturnLength ueberlappt somit ObjectInformation+8, das Buffer-Feld der
+nativen UNICODE_STRING. Das passt zur Ueberschreibung des Zeigers mit
+einer Rueckgabelaenge 0x80. Der genaue Schreibzeitpunkt ist nicht im Dump
+belegt, weil Benutzerseiten teilweise fehlen; diese Grenze beibehalten.
+
+Absturztreiber:
+HyperHideDrv.sys SHA256
+C9DC14B85020B32E4D08DC22B66B6FC7F5E247FDC73CD062B0D7352B57AB8D57
+airhv.sys SHA256
+C4F55AD0351B42CB6660538197AD3A7D9E7075676EC0920AC7A5900227E3DD6F
+
+AUFGABE:
+1. vendor/HyperHide/HyperHideDrv/HookedFunctions.cpp,
+   HookedNtQueryObject pruefen (im untersuchten master ab Zeile 551).
+   Die ungesicherten RtlEqualUnicodeString-Aufrufe fuer Klasse 2 und 3
+   sind im passenden v5-Snapshot zu bestaetigen.
+2. Minimalen Fix fuer die gesamte Nachbearbeitung von Benutzerpuffern
+   erstellen: sichere Laengen-/Bereichs-/Ueberlaufpruefung, abgesicherte
+   Erfassung von UNICODE_STRING und Inhalt, SEH fuer ALLE Benutzerzugriffe
+   einschliesslich ReturnLength, Zaehler und Pointer-Walk in Klasse 3.
+   ProbeForRead/Write allein beseitigt TOCTOU nicht. Keine ungesicherten
+   Benutzerzeiger an RtlEqualUnicodeString weiterreichen.
+3. Ueberlappung von ReturnLength und ObjectInformation explizit behandeln.
+   Wenn nach dem Originalaufruf keine sichere Nachbearbeitung moeglich ist,
+   dessen Rueckgabe erhalten und die Nachbearbeitung auslassen. Keine
+   erfolgreiche Originalantwort allein wegen des nachgeschalteten Hooks
+   in einen neuen Fehler umwandeln. Originalaufruf nicht durch Verwendung
+   anderer Puffer unbemerkt semantisch veraendern.
+4. Native Kernel-Strukturlayouts und WOW64-Konvertierung getrennt beachten.
+   Nicht pauschal aufgrund eines 32-Bit-Aufrufers UNICODE_STRING32 im
+   x64-Kernelhook annehmen. Keine fest geratenen Offsets als Reparatur.
+5. Die bestaetigten v5-Fixes fuer VPID-Invalidierung, Kernelalias,
+   KiDispatchException-Signatur und Build-Offsets unveraendert erhalten.
+   airhv und CPUID-/Plugin-Lifecycle fuer diesen Fix NICHT veraendern.
+
+VALIDIERUNG UND BUILD:
+- Regressionen fuer Klasse 2/3: normale Puffer, ReturnLength=NULL,
+  getrennte Rueckgabe, Rueckgabe im Output (insbesondere +8), kurze Puffer,
+  ungueltige/veraenderte Stringzeiger, Grenzueberlaeufe und konkurrierende
+  Aenderungen. Bestehenden fehlerhaften Treiber nicht fuer solche Live-Tests
+  laden. Offlinepruefungen und noch ausstehende HP-Runtime-Tests ausweisen.
+- Bekannte Umgebung laut Handoff: VS Community 18, MSVC 14.51.36231,
+  SDK/WDK 10.0.26100.0, auch SDK 10.0.19041.0. Bestehende explizite
+  Compiler-/Include-/Lib-/Linker-Pfade des Projekts ermitteln und benutzen.
+  Root-build.ps1 baut src/patch.sln / patch.exe, NICHT HyperHideDrv!
+- Release-x64-Treiber mit passenden PDBs erzeugen. Reproduzierbaren
+  Build-Befehl oder Build-Skript und vollstaendiges Build-Log ablegen.
+- Separates Paket v5.1-ntqueryobject-fix liefern: neue HyperHideDrv.sys,
+  passende PDB, unveraenderte v5-airhv.sys mit Hashpruefung, SHA256SUMS,
+  Quell-Diff, Basis-Commit/Snapshot-Hash, Install-/Start-/Stop-Skripte,
+  Backup-/Rueckfallpfad. Keine automatische Installation oder Neustarts.
+- Die zwei autorisierten Minidumps unter docs/bench-20261029 fuer die Offlineanalyse verwenden; weitere Speicherdumps nicht automatisch hinzufuegen. Den alten
+  v5-Build und seine ZIPs nicht ueberschreiben.
+
+WICHTIGE ABGRENZUNG:
+NtQueryObject=0 in den Profilen Default Attach / Default Create Process
+verhindert auf der Bench den beobachteten Hook-Crash. Der fruehe Attach
+kam damit durch, BeingDebugged=0; danach kam bei 75% ein VM-Dialog.
+Dieser Dialog tritt sogar beim nativen Start mit NUR airhv auf.
+Der Crash-Fix alleine loest deshalb noch nicht den vollstaendigen Start.
+Die VM-Erkennung wird getrennt in PROMPT-02 untersucht.
+
+Am Ende melden: geaenderte Stellen, Build-Ergebnis, ausgefuehrte Tests,
+noch NICHT ausgefuehrte Tests und Pfad/Hash des zur Bench zu kopierenden
+Pakets. Nicht behaupten, Flex starte erfolgreich, solange das nicht auf
+der HP-Bench geprueft wurde.

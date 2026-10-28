@@ -1,5 +1,10 @@
 # Handoff: UPGDSED + HyperHide/airhv v5 and v6
 
+> Updated bench evidence and the current work order are in
+> [nextsteps.md](../nextsteps.md): NtQueryObject crash identified, two
+> minidumps included, and a VM dialog reproduced with airhv alone.
+> Read that handoff before resuming driver changes or runtime tests.
+
 Date: 2026-10-29  
 Target used for runtime checks: HP EliteBook 840 G1, Intel Core i5-4300U,
 Windows 10 22H2 build 19045, kernel `10.0.19041.7802`.

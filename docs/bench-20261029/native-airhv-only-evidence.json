@@ -1,0 +1,27 @@
+{
+    "Time":  "2026-10-28T23:58:27.6220086+01:00",
+    "Services":  [
+                     {
+                         "Name":  "airhv",
+                         "Status":  "Running"
+                     },
+                     {
+                         "Name":  "HyperHideDrv",
+                         "Status":  "Stopped"
+                     }
+                 ],
+    "Processes":  [
+                      {
+                          "Id":  16208,
+                          "StartTime":  "\/Date(1793228202805)\/"
+                      }
+                  ],
+    "Dialogs":  [
+                    {
+                        "Handle":  787322,
+                        "OwnerPid":  644,
+                        "Title":  "flex.exe",
+                        "Text":  "OK | Sorry, this application cannot run under a Virtual Machine."
+                    }
+                ]
+}
