@@ -1,0 +1,21 @@
+HyperHide Windows 10 19045 x64 - known-good v5
+Saved: 2026-10-28
+
+Confirmed on target HP EliteBook 840 G1:
+- airhv: RUNNING
+- HyperHideDrv: RUNNING
+- UPGDSED boot kernel alias ntkrnlmp.exe supported
+
+Runtime bundle:
+HyperHide-Win10-19045-x64-v5-KNOWN-GOOD.zip
+SHA256 96831611B9D87B9222D0C2644FFE9155C162AD62D485667694EF8877602B3F7F
+
+Source snapshot:
+HyperHide-v5-source-KNOWN-GOOD.zip
+SHA256 5ECD3971AA889F71D8605AACE70BF4287A40DC2ED4DA1C8997C4F7C9EB066ACD
+
+Important component hashes:
+airhv.sys       C4F55AD0351B42CB6660538197AD3A7D9E7075676EC0920AC7A5900227E3DD6F
+HyperHideDrv.sys C9DC14B85020B32E4D08DC22B66B6FC7F5E247FDC73CD062B0D7352B57AB8D57
+
+Do not overwrite these files when developing later variants.

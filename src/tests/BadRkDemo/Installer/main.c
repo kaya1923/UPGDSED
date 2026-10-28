@@ -21,15 +21,6 @@
 #error ANSI build is not supported
 #endif
 
-#if (_MSC_VER >= 1900) 
-#ifdef _DEBUG
-#pragma comment(lib, "vcruntimed.lib")
-#pragma comment(lib, "ucrtd.lib")
-#else
-#pragma comment(lib, "libvcruntime.lib")
-#endif
-#endif
-
 //
 // Ignored warnings
 //
@@ -50,6 +41,43 @@
 #include <ntstatus.h>
 
 #define PGDEMOREGDRV L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\PGDemo"
+
+VOID ConsolePrint(
+    _In_ LPCWSTR Text)
+{
+    CHAR Utf8Buffer[512];
+    INT Utf8Length;
+    DWORD Written;
+    HANDLE Output = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if ((Output != NULL) && (Output != INVALID_HANDLE_VALUE)) {
+        if (WriteConsoleW(Output, Text, (DWORD)_strlen(Text), &Written, NULL)) {
+            WriteConsoleW(Output, L"\r\n", 2, &Written, NULL);
+        }
+        else {
+            Utf8Length = WideCharToMultiByte(CP_UTF8, 0, Text, -1,
+                Utf8Buffer, sizeof(Utf8Buffer) - 3, NULL, NULL);
+            if (Utf8Length > 0) {
+                Utf8Buffer[Utf8Length - 1] = '\r';
+                Utf8Buffer[Utf8Length] = '\n';
+                WriteFile(Output, Utf8Buffer, Utf8Length + 1, &Written, NULL);
+            }
+        }
+    }
+}
+
+VOID ConsolePrintStatus(
+    _In_ LPCWSTR Prefix,
+    _In_ ULONG Status)
+{
+    WCHAR Buffer[160];
+
+    RtlSecureZeroMemory(Buffer, sizeof(Buffer));
+    _strcpy(Buffer, Prefix);
+    _strcat(Buffer, L"0x");
+    ultohex(Status, _strend(Buffer));
+    ConsolePrint(Buffer);
+}
 
 /*
 * NativeAdjustPrivilege
@@ -218,9 +246,11 @@ typedef struct _INOUT_PARAM {
 * Send request to the driver.
 *
 */
-void CallDriver(
-    ULONG TestType)
+BOOL CallDriver(
+    ULONG TestType,
+    BOOL ReportErrors)
 {
+    BOOL            Result = FALSE;
     HANDLE          h;
     INOUT_PARAM     tmp;
     DWORD           bytesIO;
@@ -231,12 +261,24 @@ void CallDriver(
 
         tmp.TestType = TestType;
 
-        DeviceIoControl(h, PGDEMO_SET_TEST_TYPE,
+        Result = DeviceIoControl(h, PGDEMO_SET_TEST_TYPE,
             &tmp, sizeof(tmp), &tmp,
             sizeof(tmp), &bytesIO, NULL);
 
+        if (Result) {
+            ConsolePrintStatus(L"[PGDemo] Test request accepted, type = ", TestType);
+        }
+        else if (ReportErrors) {
+            ConsolePrintStatus(L"[PGDemo] DeviceIoControl failed, Win32 error = ", GetLastError());
+        }
+
         CloseHandle(h);
     }
+    else if (ReportErrors) {
+        ConsolePrintStatus(L"[PGDemo] Cannot open \\\\.\\PGDemo, Win32 error = ", GetLastError());
+    }
+
+    return Result;
 }
 
 typedef struct _CPUInfo {
@@ -275,7 +317,7 @@ BOOL IsSmepSupported(
 * Program entry point.
 *
 */
-void main()
+int wmain(void)
 {
     NTSTATUS Status;
     ULONG l, TestType = 0;
@@ -293,20 +335,28 @@ void main()
     if (l > 0)
         TestType = strtoul(szBuffer);
 
+    ConsolePrint(L"[PGDemo] PatchGuard test controller");
+    if (TestType > TT_NOTIFY_CALLOUT) {
+        ConsolePrint(L"[PGDemo] Invalid test. Use 0, 1, 2 or 3.");
+        return ERROR_INVALID_PARAMETER;
+    }
+
+    // If the driver is already running, send the next test directly. The
+    // driver intentionally has no unload routine, so reloading it is invalid.
+    if (CallDriver(TestType, FALSE))
+        return ERROR_SUCCESS;
+
     if (TestType == TT_CR4) {
         if (!IsSmepSupported()) {
             MessageBox(GetDesktopWindow(), TEXT("[PGDemo] SMEP is not supported by this CPU"), NULL, MB_ICONERROR);
-            return;
+            return ERROR_NOT_SUPPORTED;
         }
     }
 
     Status = NativeAdjustPrivilege(SE_LOAD_DRIVER_PRIVILEGE);
     if (!NT_SUCCESS(Status)) {
-        RtlSecureZeroMemory(&szBuffer, sizeof(szBuffer));
-        _strcpy(szBuffer, L"[PGDemo] NativeAdjustPrivilege result = 0x");
-        ultohex(Status, _strend(szBuffer));
-        MessageBox(GetDesktopWindow(), szBuffer, NULL, MB_ICONERROR);
-        return;
+        ConsolePrintStatus(L"[PGDemo] NativeAdjustPrivilege failed, NTSTATUS = ", Status);
+        return RtlNtStatusToDosError(Status);
     }
 
     _strcpy(szBuffer, L"\\??\\");
@@ -319,24 +369,21 @@ void main()
 
     Status = NtCreateSymbolicLinkObject(&Link, SYMBOLIC_LINK_ALL_ACCESS, &Obja, &drvname);
     if (!NT_SUCCESS(Status)) {
-        RtlSecureZeroMemory(&szBuffer, sizeof(szBuffer));
-        _strcpy(szBuffer, L"[Test] NtCreateSymbolicLinkObject result = 0x");
-        ultohex(Status, _strend(szBuffer));
-        MessageBox(GetDesktopWindow(), szBuffer, NULL, MB_ICONERROR);
+        ConsolePrintStatus(L"[PGDemo] Cannot prepare driver image path, NTSTATUS = ", Status);
     }
     else {
 
-        Status = NativeLoadDriver(L"\\*", PGDEMOREGDRV, NULL, TRUE);
-        RtlSecureZeroMemory(&szBuffer, sizeof(szBuffer));
-        _strcpy(szBuffer, L"[Test] NativeLoadDriver result = 0x");
-        ultohex(Status, _strend(szBuffer));
-        MessageBox(GetDesktopWindow(), szBuffer, NULL, MB_ICONINFORMATION);
+        Status = NativeLoadDriver(L"\\*", PGDEMOREGDRV, NULL, FALSE);
+        ConsolePrintStatus(L"[PGDemo] NativeLoadDriver NTSTATUS = ", Status);
 
         if (Link)
             NtClose(Link);
 
         if (NT_SUCCESS(Status)) {
-            CallDriver(TestType);
+            if (!CallDriver(TestType, TRUE))
+                ConsolePrint(L"[PGDemo] Driver loaded, but test request failed.");
         }
     }
+
+    return NT_SUCCESS(Status) ? ERROR_SUCCESS : RtlNtStatusToDosError(Status);
 }

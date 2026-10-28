@@ -496,6 +496,120 @@ BOOLEAN ModifyFilesAndMove(
 }
 
 /*
+* CreateDryRunFiles
+*
+* Create original and patched copies next to the executable without touching
+* System32, BCD or service configuration.
+*/
+_Success_(return)
+BOOLEAN CreateDryRunFiles(
+    _In_ BOOLEAN EnableFiberContextPatch,
+    _Out_writes_z_(OutputDirectoryCch) LPWSTR OutputDirectory,
+    _In_ SIZE_T OutputDirectoryCch
+)
+{
+    ULONG NumberOfPatches;
+    ULONG_PTR PatchContext[MAX_PATCH_COUNT];
+    SIZE_T Index, RootLength;
+    WCHAR ModulePath[MAX_PATH * 2];
+    WCHAR OriDirectory[MAX_PATH * 2];
+    WCHAR ModDirectory[MAX_PATH * 2];
+    WCHAR SourcePath[MAX_PATH * 2];
+    WCHAR DestinationPath[MAX_PATH * 2];
+
+    if ((OutputDirectory == NULL) || (OutputDirectoryCch == 0))
+        return FALSE;
+
+    OutputDirectory[0] = 0;
+
+    RtlSecureZeroMemory(ModulePath, sizeof(ModulePath));
+    if (GetModuleFileName(NULL, ModulePath, RTL_NUMBER_OF(ModulePath)) == 0)
+        return FALSE;
+
+    RootLength = 0;
+    for (Index = 0; ModulePath[Index] != 0; Index++) {
+        if ((ModulePath[Index] == L'\\') || (ModulePath[Index] == L'/'))
+            RootLength = Index + 1;
+    }
+    ModulePath[RootLength] = 0;
+
+    _strcpy(OutputDirectory, ModulePath);
+    _strcat(OutputDirectory, TEXT("dryrun"));
+    if (!CreateDirectory(OutputDirectory, NULL) &&
+        (GetLastError() != ERROR_ALREADY_EXISTS))
+    {
+        return FALSE;
+    }
+
+    _strcpy(OriDirectory, OutputDirectory);
+    _strcat(OriDirectory, TEXT("\\ori"));
+    if (!CreateDirectory(OriDirectory, NULL) &&
+        (GetLastError() != ERROR_ALREADY_EXISTS))
+    {
+        return FALSE;
+    }
+
+    _strcpy(ModDirectory, OutputDirectory);
+    _strcat(ModDirectory, TEXT("\\mod"));
+    if (!CreateDirectory(ModDirectory, NULL) &&
+        (GetLastError() != ERROR_ALREADY_EXISTS))
+    {
+        return FALSE;
+    }
+
+    // Keep an untouched copy of the kernel using its original filename.
+    _strcpy(SourcePath, g_szTempDirectory);
+    _strcat(SourcePath, NTOSKRNMP_EXE);
+    _strcpy(DestinationPath, OriDirectory);
+    _strcat(DestinationPath, TEXT("\\"));
+    _strcat(DestinationPath, NTOSKRNL_EXE);
+    if (!CopyFile(SourcePath, DestinationPath, FALSE))
+        return FALSE;
+
+    // Create and patch the kernel copy under the filename used by the BCD entry.
+    _strcpy(DestinationPath, ModDirectory);
+    _strcat(DestinationPath, TEXT("\\"));
+    _strcat(DestinationPath, NTOSKRNMP_EXE);
+    if (!CopyFile(SourcePath, DestinationPath, FALSE))
+        return FALSE;
+
+    NumberOfPatches = 0;
+    PatchContext[NumberOfPatches++] = (ULONG_PTR)&SeValidateImageData;
+    PatchContext[NumberOfPatches++] = (ULONG_PTR)&CcInitializeBcbProfiler;
+    PatchContext[NumberOfPatches++] = (ULONG_PTR)&SepInitializeCodeIntegrity;
+    if (EnableFiberContextPatch) {
+        PatchContext[NumberOfPatches++] = (ULONG_PTR)&KiFilterFiberContext;
+    }
+    else {
+        PatchContext[NumberOfPatches++] = (ULONG_PTR)&KeInitAmd64SpecificState;
+        PatchContext[NumberOfPatches++] = (ULONG_PTR)&ExpLicenseWatchInitWorker;
+    }
+    if (!supPatchFile(DestinationPath, (ULONG_PTR*)&PatchContext, NumberOfPatches))
+        return FALSE;
+
+    // Keep the original boot loader and a separately patched copy.
+    _strcpy(SourcePath, g_szTempDirectory);
+    _strcat(SourcePath, (g_IsEFI != FALSE) ? OSLOAD_EFI : OSLOAD_EXE);
+    _strcpy(DestinationPath, OriDirectory);
+    _strcat(DestinationPath, TEXT("\\"));
+    _strcat(DestinationPath, (g_IsEFI != FALSE) ? WINLOAD_EFI : WINLOAD_EXE);
+    if (!CopyFile(SourcePath, DestinationPath, FALSE))
+        return FALSE;
+
+    _strcpy(DestinationPath, ModDirectory);
+    _strcat(DestinationPath, TEXT("\\"));
+    _strcat(DestinationPath, (g_IsEFI != FALSE) ? OSLOAD_EFI : OSLOAD_EXE);
+    if (!CopyFile(SourcePath, DestinationPath, FALSE))
+        return FALSE;
+
+    PatchContext[0] = (ULONG_PTR)&ImgpValidateImageHash;
+    if (!supPatchFile(DestinationPath, (ULONG_PTR*)&PatchContext, 1))
+        return FALSE;
+
+    return TRUE;
+}
+
+/*
 * PatchMain
 *
 * Purpose:
@@ -505,10 +619,12 @@ BOOLEAN ModifyFilesAndMove(
 */
 UINT PatchMain()
 {
+    UINT ExitCode = ERROR_GEN_FAILURE;
     BOOL AlreadyInstalled = FALSE;
     BOOLEAN bCond = FALSE;
     BOOLEAN bEnabled = FALSE;
     BOOLEAN EnableFiberContextPatch = FALSE;
+    BOOLEAN ScanOnly = FALSE;
     DWORD l = 0;
     FIRMWARE_TYPE FirmwareType;
     OSVERSIONINFO osver;
@@ -518,6 +634,7 @@ UINT PatchMain()
     ULONG NtBuildNumber = 0;
 
     WCHAR szBuffer[MAX_PATH * 2];
+    WCHAR szDryRunDirectory[MAX_PATH * 2];
 
     RtlSecureZeroMemory(&osver, sizeof(osver));
     osver.dwOSVersionInfoSize = sizeof(osver);
@@ -573,9 +690,33 @@ UINT PatchMain()
         */
 
         //
-        // Check if patch already installed.
+        // Query optional commands. -scanonly performs all read-only discovery
+        // steps but stops before files or BCD entries are modified.
         //
-        if (BcdPatchEntryAlreadyExist(BCD_PATCH_ENTRY_GUID, &AlreadyInstalled)) {
+        l = 0;
+        RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
+        GetCommandLineParam(GetCommandLine(), 1, (LPWSTR)&szBuffer, MAX_PATH * sizeof(WCHAR), &l);
+        EnableFiberContextPatch = (_strcmpi(szBuffer, TEXT("-pf")) == 0);
+        ScanOnly = (_strcmpi(szBuffer, TEXT("-scanonly")) == 0);
+
+        if (!ScanOnly) {
+            cuiPrintText(g_ConOut,
+                TEXT("\nDry run erstellen (nur Dateien in dryrun\\ori und dryrun\\mod, keine Systemänderungen)? [J/N]: "),
+                g_ConsoleOutput,
+                FALSE);
+
+            l = 0;
+            RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
+            ReadConsole(g_ConIn, szBuffer, MAX_PATH, &l, NULL);
+            ScanOnly = ((szBuffer[0] == L'J') || (szBuffer[0] == L'j') ||
+                (szBuffer[0] == L'Y') || (szBuffer[0] == L'y'));
+        }
+
+        //
+        // Check if patch already installed. This does not affect a scan-only
+        // verification because no new boot entry will be created.
+        //
+        if (!ScanOnly && BcdPatchEntryAlreadyExist(BCD_PATCH_ENTRY_GUID, &AlreadyInstalled)) {
 
             if (AlreadyInstalled) {
 
@@ -595,33 +736,25 @@ UINT PatchMain()
         }
 
         //
-        // Query optional command.
-        // Enable KiFilterFiberContext patch and don't use instead two PG initialization points patch.
-        // Required for tests.
-        //
-        l = 0;
-        RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
-        GetCommandLineParam(GetCommandLine(), 1, (LPWSTR)&szBuffer, MAX_PATH * sizeof(WCHAR), &l);
-        EnableFiberContextPatch = (_strcmpi(szBuffer, TEXT("-pf")) == 0);
-
-        //
         // Warn user.
         //
-        csbi.wAttributes = 0;
-        GetConsoleScreenBufferInfo(g_ConOut, &csbi);
-        SetConsoleTextAttribute(g_ConOut, FOREGROUND_RED | BACKGROUND_INTENSITY);
-        _strcpy(szBuffer, TEXT("\n\rWARNING: Using this tool might render your PC to an unbootable state.\r\n"));
-        _strcat(szBuffer, TEXT("If you want to continue type CONTINUE (all uppercase) and press Enter\r\n"));
-        cuiPrintText(g_ConOut, szBuffer, g_ConsoleOutput, TRUE);
-        SetConsoleTextAttribute(g_ConOut, csbi.wAttributes);
+        if (!ScanOnly) {
+            csbi.wAttributes = 0;
+            GetConsoleScreenBufferInfo(g_ConOut, &csbi);
+            SetConsoleTextAttribute(g_ConOut, FOREGROUND_RED | BACKGROUND_INTENSITY);
+            _strcpy(szBuffer, TEXT("\n\rWARNING: Using this tool might render your PC to an unbootable state.\r\n"));
+            _strcat(szBuffer, TEXT("If you want to continue type CONTINUE (all uppercase) and press Enter\r\n"));
+            cuiPrintText(g_ConOut, szBuffer, g_ConsoleOutput, TRUE);
+            SetConsoleTextAttribute(g_ConOut, csbi.wAttributes);
 
 #ifndef _DEBUG
-        l = 0;
-        RtlSecureZeroMemory(&szBuffer, sizeof(szBuffer));
-        ReadConsole(g_ConIn, &szBuffer, MAX_PATH, &l, NULL);
-        if (_strncmp(szBuffer, CONTINUE_CMD, _strlen(CONTINUE_CMD)) != 0)
-            break;
+            l = 0;
+            RtlSecureZeroMemory(&szBuffer, sizeof(szBuffer));
+            ReadConsole(g_ConIn, &szBuffer, MAX_PATH, &l, NULL);
+            if (_strncmp(szBuffer, CONTINUE_CMD, _strlen(CONTINUE_CMD)) != 0)
+                break;
 #endif
+        }
 
         //
         // Query boot state
@@ -781,6 +914,31 @@ UINT PatchMain()
             cuiPrintText(g_ConOut, TEXT("\nPatch: Winload scan complete."), g_ConsoleOutput, TRUE);
         }
 
+        if (ScanOnly) {
+            RtlSecureZeroMemory(szDryRunDirectory, sizeof(szDryRunDirectory));
+            if (!CreateDryRunFiles(
+                EnableFiberContextPatch,
+                szDryRunDirectory,
+                RTL_NUMBER_OF(szDryRunDirectory)))
+            {
+                supShowError(GetLastError(), TEXT("Cannot create dry-run files"));
+                break;
+            }
+
+            _snwprintf_s(szBuffer,
+                RTL_NUMBER_OF(szBuffer),
+                RTL_NUMBER_OF(szBuffer) - 1,
+                TEXT("\nPatch: Dry-run files created in %ws"),
+                szDryRunDirectory);
+            cuiPrintText(g_ConOut, szBuffer, g_ConsoleOutput, TRUE);
+            cuiPrintText(g_ConOut,
+                TEXT("Patch: Dry-run verification complete; no System32 files, BCD entries or services were modified."),
+                g_ConsoleOutput,
+                TRUE);
+            ExitCode = ERROR_SUCCESS;
+            break;
+        }
+
 //#ifdef _DEBUG
 //        return 0;
 //#endif
@@ -805,19 +963,22 @@ UINT PatchMain()
         }
         else {
             cuiPrintText(g_ConOut, TEXT("\nPatch: BcdCreatePatchEntry succeed"), g_ConsoleOutput, TRUE);
+            ExitCode = ERROR_SUCCESS;
         }
 
     } while (bCond);
 
-    cuiPrintText(g_ConOut, TEXT("Patch: Press Enter to exit"), g_ConsoleOutput, TRUE);
+    if (!ScanOnly) {
+        cuiPrintText(g_ConOut, TEXT("Patch: Press Enter to exit"), g_ConsoleOutput, TRUE);
 
-    RtlSecureZeroMemory(&inp1, sizeof(inp1));
-    ReadConsoleInput(g_ConIn, &inp1, 1, &l);
-    ReadConsole(g_ConIn, &szBuffer, sizeof(g_BE), &l, NULL);
+        RtlSecureZeroMemory(&inp1, sizeof(inp1));
+        ReadConsoleInput(g_ConIn, &inp1, 1, &l);
+        ReadConsole(g_ConIn, &szBuffer, sizeof(g_BE), &l, NULL);
+    }
 
     cuiPrintText(g_ConOut, TEXT("Patch: Exit"), g_ConsoleOutput, TRUE);
 
-    return 0;
+    return ExitCode;
 }
 
 /*

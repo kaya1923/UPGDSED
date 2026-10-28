@@ -1,0 +1,45 @@
+# Local IDE and build state
+.vs/
+**/.vs/
+**/Debug/
+**/Release/
+**/output/
+**/out/
+*.obj
+*.iobj
+*.ipdb
+*.pdb
+*.ilk
+*.exp
+*.tlog
+*.recipe
+*.user
+*.log
+
+# Crash dumps and downloaded symbol caches may contain machine-specific data.
+*.dmp
+# The curated root symbols/ directory is tracked; ad-hoc caches remain local.
+third_party/**/symbols/
+!symbols/
+!symbols/**/
+!symbols/**/*.pdb
+
+# Local upstream working clones are represented by the clean vendor snapshot.
+third_party/
+
+# Extracted release staging directories; versioned ZIPs are tracked separately.
+bin/HyperHide/x64/
+bin/HyperHide/HyperHide-Win10-19045-x64-v2.zip
+bin/HyperHide/HyperHide-Win10-19045-x64-v3.zip
+bin/HyperHide/HyperHide-Win10-19045-x64-v4-diagnostic.zip
+bin/HyperHide/HyperHide-Win10-19045-x64.zip
+
+# One-off local verifier outputs.
+verify_offsets.obj
+verify_offsets_dia.obj
+
+# Superseded local scratch wrappers; use build.ps1 from the repository root.
+build.bat
+src/build_test.bat
+
+

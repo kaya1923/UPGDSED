@@ -1,0 +1,24 @@
+// Test MCP file with hex patterns
+// Function: MyTestFunction
+
+00401000 55                    push    ebp
+00401001 89E5                  mov     ebp, esp
+00401003 8B4508                mov     eax, [ebp+8]
+00401006 8B550C                mov     edx, [ebp+12]
+
+// Pattern data for ImgpValidateImageHash
+// Build number: 22621
+
+//  First pattern bytes:
+//  48 89 5C 24 08 
+//  48 89 74 24 10 
+//  57 
+//  48 83 EC 20 
+//  48 8B F9 
+//  48 8B FA 
+//  48 8B D9 
+//  48 8B E9 
+//  48 89 7C 24 18 
+
+// Expected hex pattern:
+48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 48 8B F9 48 8B FA 48 8B D9 48 8B E9 48 89 7C 24 18
