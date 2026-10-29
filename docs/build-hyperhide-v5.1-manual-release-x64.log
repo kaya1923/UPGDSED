@@ -1,0 +1,68 @@
+Visual Studio: C:\Program Files\Microsoft Visual Studio\18\Community
+MSVC:          C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\MSVC\14.51.36231
+Windows SDK:   10.0.26100.0
+Source:        G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv
+Output:        G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\out\HyperHideDrv-v5.1
+Dispatcher.cpp
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.h(20): warning C4312: "Typumwandlung": Konvertierung von "T" in größeren Typ "HANDLE"
+        with
+        [
+            T=ULONG
+        ]
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.h(20): note: der Vorlageninstanziierungskontext (der älteste zuerst) ist
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Dispatcher.cpp(24): note: Siehe Verweis auf die gerade kompilierte Instanziierung "PEPROCESS PidToProcess<ULONG>(T)" der Funktions-Vorlage.
+        with
+        [
+            T=ULONG
+        ]
+Driver.cpp
+Heap.cpp
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Heap.cpp(34): warning C4312: "Typumwandlung": Konvertierung von "ULONG" in größeren Typ "ULONG *"
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Heap.cpp(37): warning C4312: "Typumwandlung": Konvertierung von "ULONG" in größeren Typ "ULONG *"
+Hider.cpp
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Hider.cpp(140): warning C4996: 'ExAllocatePoolWithTag': ExAllocatePoolWithTag is deprecated, use ExAllocatePool2.
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Hider.cpp(328): warning C4996: 'ExAllocatePoolWithTag': ExAllocatePoolWithTag is deprecated, use ExAllocatePool2.
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.h(20): warning C4312: "Typumwandlung": Konvertierung von "T" in größeren Typ "HANDLE"
+        with
+        [
+            T=ULONG
+        ]
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.h(20): note: der Vorlageninstanziierungskontext (der älteste zuerst) ist
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Hider.cpp(440): note: Siehe Verweis auf die gerade kompilierte Instanziierung "PEPROCESS PidToProcess<ULONG>(T)" der Funktions-Vorlage.
+        with
+        [
+            T=ULONG
+        ]
+HookedFunctions.cpp
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\HookedFunctions.cpp(703): warning C4996: 'ExAllocatePoolWithTag': ExAllocatePoolWithTag is deprecated, use ExAllocatePool2.
+HookHelper.cpp
+HypervisorGateway.cpp
+KuserSharedData.cpp
+Log.cpp
+Notifiers.cpp
+Peb.cpp
+Ssdt.cpp
+Utils.cpp
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(184): warning C4996: 'ExAllocatePoolWithTag': ExAllocatePoolWithTag is deprecated, use ExAllocatePool2.
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(245): warning C4996: 'ExAllocatePoolWithTag': ExAllocatePoolWithTag is deprecated, use ExAllocatePool2.
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(342): warning C4312: "Typumwandlung": Konvertierung von "ULONG" in größeren Typ "PPEB_LDR_DATA32"
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(342): warning C4312: "Typumwandlung": Konvertierung von "ULONG" in größeren Typ "PLIST_ENTRY32"
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(343): warning C4312: "Typumwandlung": Konvertierung von "ULONG" in größeren Typ "PPEB_LDR_DATA32"
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(344): warning C4312: "Typumwandlung": Konvertierung von "ULONG" in größeren Typ "PLIST_ENTRY32"
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(349): warning C4312: "Typumwandlung": Konvertierung von "ULONG" in größeren Typ "PWCH"
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(353): warning C4312: "Typumwandlung": Konvertierung von "ULONG" in größeren Typ "PVOID"
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(404): warning C4996: 'ExAllocatePoolWithTag': ExAllocatePoolWithTag is deprecated, use ExAllocatePool2.
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(446): warning C4996: 'ExAllocatePoolWithTag': ExAllocatePoolWithTag is deprecated, use ExAllocatePool2.
+G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\Utils.cpp(550): warning C4996: 'ExAllocatePoolWithTag': ExAllocatePoolWithTag is deprecated, use ExAllocatePool2.
+ Assembling: G:\PROJECTS\UPGDSED\vendor\HyperHide-v5.1\HyperHideDrv\vmintrin.asm
+Code wird generiert.
+Codegenerierung ist abgeschlossen.
+ntqueryobject_safety_tests.cpp
+NtQueryObject safety regression tests passed
+
+Algorithm       Hash                                                                   Path                            
+---------       ----                                                                   ----                            
+SHA256          90974C370093984DCCEA35B6A9EBF3C54F961B35FF1BCEE28E657D4AABAC85F3       G:\PROJECTS\UPGDSED\vendor\Hy...
+SHA256          C2EC9977E538CAC09AD551A12A21F574F20DFEC820E2DF5600B3BB051D2B0E41       G:\PROJECTS\UPGDSED\vendor\Hy...
+
+

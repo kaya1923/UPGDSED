@@ -7,6 +7,49 @@ Stand: 29.10.2026, HP-Bench. Diese Übergabe ergänzt und aktualisiert
 Prompt 1 bearbeiten. Prompt 2 ist eine getrennte Untersuchung. Vor Änderungen
 vorhandene Arbeitsstände und gegebenenfalls AGENTS.md beachten.
 
+> Bearbeitungsstand 29.10.2026: Prompt 1 und der Diagnosepaket-Teil von
+> Prompt 2 sind umgesetzt. Ergebnisse, Hashes, ausgeführte Prüfungen und die
+> noch offenen HP-Bench-Tests stehen in
+> [docs/HANDOFF_NEXTSTEPS_20261029.md](docs/HANDOFF_NEXTSTEPS_20261029.md).
+> Ein airhv-VM-Erkennungsfix wurde bewusst noch nicht geraten; dafür fehlen die
+> mit dem neuen Diagnosepaket zu erhebenden Drei-Zustands-Messwerte.
+
+## Umgesetzter Stand für die nächste Maschine
+
+Crashfix-Paket:
+
+- `bin/HyperHide/HyperHide-Win10-19045-x64-v5.1-ntqueryobject-fix.zip`
+- SHA-256 `3580804C36F27504585A670236350EC37B271E61B8A70B34D2FA4205736C95E4`
+- `HyperHideDrv.sys` SHA-256
+  `90974C370093984DCCEA35B6A9EBF3C54F961B35FF1BCEE28E657D4AABAC85F3`
+- passende `HyperHideDrv.pdb` SHA-256
+  `C2EC9977E538CAC09AD551A12A21F574F20DFEC820E2DF5600B3BB051D2B0E41`
+- unveränderte v5-`airhv.sys` SHA-256
+  `C4F55AD0351B42CB6660538197AD3A7D9E7075676EC0920AC7A5900227E3DD6F`
+
+CPUID-Diagnosepaket:
+
+- `bin/HyperHide/HyperHide-CPUID-Diagnostics-x86-x64-20261029.zip`
+- SHA-256 `D2BBB67F3FE312CB3B3EC4AEC1F2D05EEC4E2548302100CB290F837423F9C16A`
+- enthält x86/x64 EXE und PDB, Quelle, Buildskript, Buildlog,
+  `collect.ps1`, Anleitung und `SHA256SUMS.txt`.
+
+Auf der HP-Bench mit denselben Diagnosebinärdateien erfassen:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\collect.ps1 -State drivers-off
+powershell -ExecutionPolicy Bypass -File .\collect.ps1 -State v5-airhv-only
+powershell -ExecutionPolicy Bypass -File .\collect.ps1 -State v6-airhv-only
+```
+
+Vor dem zweiten beziehungsweise dritten Lauf nur die passende `airhv.sys` über
+`start.ps1 -AirhvOnly` starten und anschließend mit deren `stop.ps1` stoppen.
+Der Collector ändert selbst keinen Treiberzustand. Der v5.1-Treiber wurde
+offline gebaut und geprüft, aber noch nicht auf der HP-Bench geladen. Beide
+ZIPs wurden nach dem Packen zurückentpackt und vollständig gegen ihre
+SHA-256-Manifeste geprüft. Vollständige technische Übergabe:
+[docs/HANDOFF_NEXTSTEPS_20261029.md](docs/HANDOFF_NEXTSTEPS_20261029.md).
+
 ## Verifizierte Ausgangslage
 
 - HP EliteBook 840 G1, Intel i5-4300U, Windows 10 22H2 Build 19045,
