@@ -7,12 +7,13 @@ Stand: 29.10.2026, HP-Bench. Diese Übergabe ergänzt und aktualisiert
 Prompt 1 bearbeiten. Prompt 2 ist eine getrennte Untersuchung. Vor Änderungen
 vorhandene Arbeitsstände und gegebenenfalls AGENTS.md beachten.
 
-> Bearbeitungsstand 29.10.2026: Prompt 1 und der Diagnosepaket-Teil von
-> Prompt 2 sind umgesetzt. Ergebnisse, Hashes, ausgeführte Prüfungen und die
-> noch offenen HP-Bench-Tests stehen in
-> [docs/HANDOFF_NEXTSTEPS_20261029.md](docs/HANDOFF_NEXTSTEPS_20261029.md).
-> Ein airhv-VM-Erkennungsfix wurde bewusst noch nicht geraten; dafür fehlen die
-> mit dem neuen Diagnosepaket zu erhebenden Drei-Zustands-Messwerte.
+> Bearbeitungsstand 29.10.2026 (Build-PC Nachzug): Prompt 1 und Diagnosepaket
+> sind umgesetzt. Die HP-Drei-Zustands-Captures sind ausgewertet in
+> [docs/CPUID-CAPTURE-ANALYSIS-20261029.md](docs/CPUID-CAPTURE-ANALYSIS-20261029.md):
+> v6 matcht die CPUID-Register; verbleibend ist vor allem Timing (~3–6×).
+> Kein weiterer Register-Spoof. Nächster Runtime-Schritt: v5.1 Early-Attach auf
+> der HP-Bench. Runbook und ZIPs liegen im bench-min Pack unter
+> `tools/flex-x32dbg/local-session/packages-20261029/`.
 
 ## Umgesetzter Stand für die nächste Maschine
 

@@ -111,23 +111,26 @@ Die bekannten Originale bleiben unverändert:
 - v5 Runtime SHA-256
   `96831611B9D87B9222D0C2644FFE9155C162AD62D485667694EF8877602B3F7F`
 
+## CPUID-Captures (nachgezogen, Build-PC)
+
+Die drei Zustände von der HP-Bench sind ausgewertet:
+[CPUID-CAPTURE-ANALYSIS-20261029.md](CPUID-CAPTURE-ANALYSIS-20261029.md).
+
+- v5-airhv: `hypervisor_present=1`, Vendor `airh`, leaf `0x40000000` leakt.
+- v6-airhv: Register identisch zu drivers-off (außer leaf1-EBX/APIC).
+- Timing unter airhv: leaf0-Median ~756–938 Zyklen vs. ~144 nativ.
+
+Daraus folgt: kein weiterer `0x40000000`-/Bit-31-Spoof. Ein airhv-Fix
+braucht entweder Timing-Kompensation oder den per MessageBox/API-BP
+identifizierten Flex-Sensor — isoliert, nicht im v5.1-Paket.
+
 ## Nächster HP-Bench-Schritt
 
-Zuerst das Diagnose-ZIP entpacken und dieselben Binärdateien in drei Zuständen
-verwenden:
+CPUID-Collect muss nicht wiederholt werden. Als Nächstes v5.1 Runtime:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\collect.ps1 -State drivers-off
-powershell -ExecutionPolicy Bypass -File .\collect.ps1 -State v5-airhv-only
-powershell -ExecutionPolicy Bypass -File .\collect.ps1 -State v6-airhv-only
-```
-
-Vor dem zweiten und dritten Befehl jeweils ausschließlich die passende airhv
-mit `start.ps1 -AirhvOnly` aus dem jeweiligen Paket starten und danach mit
-dessen `stop.ps1` stoppen. Der Collector ändert selbst keinen Treiberzustand.
-
-Für den v5.1-Runtimetest zuerst Backup/Wiederherstellung sicherstellen, v5.1
-mit `install.ps1` als demand-start installieren und die vorhandene zweistufige
-Startreihenfolge verwenden. Bei einem neuen Bluescreen normal booten, nicht
-erneut starten und den neuen Dump sichern. Erst reale Drei-Zustands-CPUID-Daten
-rechtfertigen einen isolierten airhv-Fix.
+1. Paket `HyperHide-Win10-19045-x64-v5.1-ntqueryobject-fix.zip` entpacken.
+2. Backup der laufenden Treiber, `preflight.ps1`, `install.ps1` (demand-start).
+3. Zweistufig starten; Early-Attach **ohne** `NtQueryObject=0`.
+4. Erfolg für diesen Schritt = kein `HookedNtQueryObject`-`0x3B`.
+5. VM-Dialog unter airhv bleibt bis zum Sensor-/Timing-Fix erwartet.
+6. Bei Crash: normal booten, Dump + mitgelieferte PDB sichern, Rollback.
