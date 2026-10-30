@@ -1,0 +1,49 @@
+HyperHide v5.2 KUSER_SHARED_DATA lifecycle fix
+Built: 2026-10-30
+
+Immediate base:
+  HyperHide-Win10-19045-x64-v5.1-ntqueryobject-fix.zip
+  SHA256 3580804C36F27504585A670236350EC37B271E61B8A70B34D2FA4205736C95E4
+  Git archive branch: archive/v5.1-fixed
+  Git commit: e6e69ba7acb80aa4707744ddd674cb7d1b1ebd28
+
+Base source snapshot:
+  HyperHide-v5-source-KNOWN-GOOD.zip
+  SHA256 5ECD3971AA889F71D8605AACE70BF4287A40DC2ED4DA1C8997C4F7C9EB066ACD
+
+Base runtime bundle:
+  HyperHide-Win10-19045-x64-v5-KNOWN-GOOD.zip
+  SHA256 96831611B9D87B9222D0C2644FFE9155C162AD62D485667694EF8877602B3F7F
+
+Unchanged v5 component:
+  airhv.sys
+  SHA256 C4F55AD0351B42CB6660538197AD3A7D9E7075676EC0920AC7A5900227E3DD6F
+
+Rebuilt component:
+  HyperHideDrv.sys
+  SHA256 2798C37855CA06B6FCA64B32E8794ED0E4D02F16793D0BA94369DB19EEA6E681
+
+Toolchain:
+  Visual Studio Community 2026 18.11.2
+  MSVC 14.51.36231
+  Windows SDK/WDK headers and libraries 10.0.26100.0
+  Release x64, native kernel driver, full PDB
+
+The repository build entry point is:
+  vendor\HyperHide-v5.2\build-release-x64.ps1
+
+Offline regression result:
+  NtQueryObject safety regression tests passed
+
+Reproducibility check:
+  HyperHideDrv.sys was identical across two clean consecutive v5.2 builds.
+  The full PDB's container hash varied across linker runs; use the exact PDB
+  shipped beside this SYS. The SYS CodeView identity remained stable.
+
+No driver was loaded and no service or BCD entry was changed on the build PC.
+
+Scope of v5.2:
+  Full-PTE preservation, atomic PTE replacement, all-processor TLB flush,
+  restore-before-free ordering, unified cleanup, and failure propagation.
+  The existing MmPfnDatabase flag operation is intentionally unchanged because
+  its build-specific semantics have not yet been proven sufficiently.
