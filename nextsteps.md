@@ -11,9 +11,70 @@ vorhandene Arbeitsstände und gegebenenfalls AGENTS.md beachten.
 > sind umgesetzt. Die HP-Drei-Zustands-Captures sind ausgewertet in
 > [docs/CPUID-CAPTURE-ANALYSIS-20261029.md](docs/CPUID-CAPTURE-ANALYSIS-20261029.md):
 > v6 matcht die CPUID-Register; verbleibend ist vor allem Timing (~3–6×).
-> Kein weiterer Register-Spoof. Nächster Runtime-Schritt: v5.1 Early-Attach auf
-> der HP-Bench. Runbook und ZIPs liegen im bench-min Pack unter
+> Kein weiterer Register-Spoof. Die NtQueryObjectSafety-Regressionstests
+> für v5.1 kompilieren ohne Warnungen und laufen erfolgreich durch
+> (29.10.2026, g++ 16.2.0, `NtQueryObject safety regression tests passed`);
+> Details in
+> [docs/HyperHide-v5.1-ntqueryobject-safety-20261029.md](docs/HyperHide-v5.1-ntqueryobject-safety-20261029.md).
+> Nächster Runtime-Schritt: v5.1 Early-Attach auf der HP-Bench. Runbook und
+> ZIPs liegen im bench-min Pack unter
 > `tools/flex-x32dbg/local-session/packages-20261029/`.
+
+## Arbeitsstand-Update 29.10.2026 (diese IDE-Instanz)
+
+Beide Pakete liegen als ZIP unter `bin/HyperHide/` und zusätzlich bereits
+extrahiert unter `tools/flex-x32dbg/local-session/`:
+
+- `HyperHide-v5.1-runtime-20261029/`: HyperHideDrv.sys v5.1
+  `90974C37...85F3`, airhv.sys v2 unverändert `C4F55AD0...76F`,
+  PDB `C2EC9977...0E41`, Skripte `preflight.ps1`, `install.ps1`,
+  `start.ps1`, `stop.ps1`, `remove.ps1`, `ROLLBACK.txt`,
+  Quell-Diff `evidence/v5-to-v5.1-ntqueryobject.patch`, Build-Log.
+  `install.ps1` verifiziert die Hashes selbst und legt vor dem
+  Überschreiben automatisch `backup-<Zeitstempel>` an. `start.ps1`
+  startet zweistufig (airhv, dann HyperHideDrv) und dekodiert
+  Fehlerstufen. Der v5.1-Crashfix ist code-complete und offline
+  verifiziert, aber **noch nicht bench-validiert**.
+- `cpuid-bench-20261029/`: x86-/x64-Diagnose-EXEs plus PDBs, `collect.ps1`
+  (prüft `sc.exe query` beider Dienste, schreibt nach
+  `captures/<Zeitstempel>-<State>/`) und `README.txt` mit Befehlsfolge.
+
+Die Hashes aus diesem Dokument, dem HANDOFF-Doc und den Paket-
+`SHA256SUMS.txt` sind gegenseitig konsistent (geprüft 29.10).
+
+HP-Bench-Sequenz (PowerShell, Admin, aus dem jeweiligen Paketordner):
+
+1. **Phase A — CPUID-Drei-Zustände (Gate für jeden airhv-Fix):**
+   - Beide Dienste gestoppt per `sc.exe query` verifizieren, dann:
+     `powershell -ExecutionPolicy Bypass -File .\collect.ps1 -State drivers-off`
+   - Danach mit dem **v5-Bundle** (nicht dem v5.1-Bundle) `start.ps1 -AirhvOnly`,
+     `.\collect.ps1 -State v5-airhv-only`, dann `stop.ps1` aus dem v5-Bundle.
+     Ggf. analog mit dem v6-Bundle: `-State v6-airhv-only`.
+   - **Achtung:** `start.ps1 -AirhvOnly` im v5.1-Bundle verlangt, dass BEIDE
+     Treiber (airhv v2 UND v5.1-HyperHideDrv) installiert sind — für Phase A
+     also die `start.ps1`/`stop.ps1` der v5-/v6-Bundles verwenden.
+   - Rückgabe an das Repo: komplettes `captures/`-Verzeichnis (inkl.
+     `context.txt`, `service-*.txt`, `capture-hashes.txt`).
+   - Gleiche EXEs in allen Zuständen, keine Neubuilds zwischen Aufnahmen;
+     erst exakte Registerwerte vergleichen, Timing nur als Verteilung.
+2. **Phase B — v5.1-Test:**
+   - `install.ps1` (demand-start, Backup automatisch) → `start.ps1`
+     (zweistufig, ohne Debugger) → das frühe-Attach-Szenario fahren,
+     das bisher BSOD 0x3B gab → `stop.ps1`.
+   - Neuer BSOD: normal booten, Dump sichern, **nicht sofort erneut
+     versuchen**. Neuen Dump gegen die Referenz-Dumps in
+     `docs/bench-20261029/` vergleichen (Fehlerstelle `HyperHideDrv+0x3B26`,
+     Funktion `HookedNtQueryObject` bei `+0x3A30`).
+   - Rollback: `stop.ps1` → `remove.ps1` → known-good v5-ZIP neu installieren.
+3. **Falls wir wieder am Treiber arbeiten müssen:**
+   - airhv-CPUID-Fix NUR nach Phase-A-Daten: minimale Einzel-Variable-Änderung,
+     separates Paket (Quellstand, Diff, Build-Log, PDBs, SHA256SUMS,
+     ausgeführte Tests). Nicht blind CPUID-Bits/Vendorstrings/Offsets ändern.
+   - V5-Originale und known-good-ZIPs unverändert lassen; v5-Snapshot
+     `57643d5b...` als Build-Basis nutzen, nicht den v6-Vendor-Baum.
+   - Danach RE-Hauptlinie (Repo-Root): `RE/STUB-TRACE-BENCH-7591.md` ab
+     TLS-Halt — PRE/POST bei `+271C6D5`, keycap bei `+962DEB` — `s4`-
+     Cleartext — entblockt `sha_makekey` (Status: `RE/STATUS.md`).
 
 ## Umgesetzter Stand für die nächste Maschine
 
