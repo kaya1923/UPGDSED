@@ -22,13 +22,18 @@
 #define WINDOWS_10_VERSION_22H2 19045
 #define WINDOWS_11 22000
 
+// HyperHideDrv-side VMCALL lifecycle (PROMPT-03). airhv owns actual VMXOFF
+// on its own unload (airhv/main.cpp driver_unload -> hvgt::vmoff).
+#define VMCALL_STATE_ACTIVE   0L
+#define VMCALL_STATE_DRAINING 1L
+#define VMCALL_STATE_OFFLINE  2L
 
 typedef struct _HYPER_HIDE_GLOBAL_DATA 
 {
 	ULONG CurrentWindowsBuildNumber;
 	ULONG NumberOfActiveDebuggers;
-	// Gates direct (non-DPC) vmcalls from hypervisor_visible / dump_pool_manager.
-	// 0 = DriverEntry incomplete or unload started; 1 = fully initialized.
-	// Hook/unhook/test_vmcall paths are intentionally NOT gated.
+	// Legacy mirror of VmcallState==ACTIVE for quick IOCTL checks; keep in sync.
 	volatile UCHAR LifecycleActive;
+	volatile LONG VmcallState; // ACTIVE / DRAINING / OFFLINE
+	volatile LONG VmcallInflight[MAXIMUM_PROCESSORS];
 }HYPER_HIDE_GLOBAL_DATA,*PHYPER_HIDE_GLOBAL_DATA;

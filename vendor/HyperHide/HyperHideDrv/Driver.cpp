@@ -13,16 +13,12 @@
 
 HYPER_HIDE_GLOBAL_DATA g_HyperHide = { 0 };
 
-static VOID SetLifecycleActive(_In_ UCHAR Value)
-{
-	InterlockedExchange8(reinterpret_cast<volatile CHAR*>(&g_HyperHide.LifecycleActive), static_cast<CHAR>(Value));
-}
-
 VOID DrvUnload(PDRIVER_OBJECT  DriverObject)
 {
-	// Close the IOCTL vmcall gate before teardown so a late hypervisor_visible
-	// cannot race unhook / hypervisor shutdown. Hook teardown still uses DPCs.
-	SetLifecycleActive(0);
+	// PROMPT-03 unload order:
+	// DRAINING -> drain inflight -> unhook (VMCS still alive via airhv) -> OFFLINE.
+	// Do NOT call hv::vmoff(): airhv owns VMXOFF in airhv/main.cpp driver_unload.
+	hv::set_vmcall_state(VMCALL_STATE_DRAINING);
 
 	Hider::Uninitialize();
 
@@ -33,7 +29,10 @@ VOID DrvUnload(PDRIVER_OBJECT  DriverObject)
 	PsRemoveCreateThreadNotifyRoutine(ThreadNotifyRoutine);
 	PsSetCreateProcessNotifyRoutine(ProcessNotifyRoutine, TRUE);
 
+	hv::wait_for_vmcall_drain();
 	hv::unhook_all_functions();
+
+	hv::set_vmcall_state(VMCALL_STATE_OFFLINE);
 
 	KeDelayExecutionThread(KernelMode, FALSE, &WaitTime);
 
@@ -84,7 +83,9 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 
 	RtlGetVersion(&OsVersion);
 	g_HyperHide.CurrentWindowsBuildNumber = OsVersion.dwBuildNumber;
-	SetLifecycleActive(0);
+	// Zero-init: VmcallState=ACTIVE, LifecycleActive=0 (IOCTL gate closed).
+	hv::set_vmcall_state(VMCALL_STATE_ACTIVE);
+	InterlockedExchange8(reinterpret_cast<volatile CHAR*>(&g_HyperHide.LifecycleActive), 0);
 
 	__try
 	{
@@ -142,7 +143,10 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 
 	if (NT_SUCCESS(HookStatus) == FALSE)
 	{
+		hv::set_vmcall_state(VMCALL_STATE_DRAINING);
+		hv::wait_for_vmcall_drain();
 		hv::unhook_all_functions();
+		hv::set_vmcall_state(VMCALL_STATE_OFFLINE);
 		PsRemoveCreateThreadNotifyRoutine(ThreadNotifyRoutine);
 		PsSetCreateProcessNotifyRoutine(ProcessNotifyRoutine, TRUE);
 		Hider::Uninitialize();
@@ -165,8 +169,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 
 	IoCreateSymbolicLink(&DosDeviceName, &DriverName);
 
-	// Open the IOCTL vmcall gate only after full init (device + hooks ready).
-	SetLifecycleActive(1);
+	hv::set_vmcall_state(VMCALL_STATE_ACTIVE);
 	
 	LogInfo("Driver initialized");
 	

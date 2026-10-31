@@ -27,6 +27,10 @@ vorhandene Arbeitsstände und gegebenenfalls AGENTS.md beachten.
 >
 > 31.10.2026: LifecycleActive-Review — IDE-Patch korrigiert und als
 > `v5.3-lifecycle-gate` gebaut (`docs/BUILD-REPORT-v5.3-lifecycle-gate-20261031.md`).
+>
+> 31.10.2026: PROMPT-03 umgesetzt → `v5.4-vmmcall-lifecycle-fix`
+> (`docs/BUILD-REPORT-v5.4-vmmcall-lifecycle-20261031.md`). airhv owns VMXOFF;
+> HyperHide drains+unhooks only. Bench: 20+ Stop/Start.
 
 ## Arbeitsstand-Update 29.10.2026 (diese IDE-Instanz)
 
