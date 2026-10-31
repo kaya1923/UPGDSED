@@ -4,8 +4,11 @@
 #include "vmintrin.h"
 #include "Ntapi.h"
 #include "Log.h"
+#include "GlobalData.h"
 
 #define IOCTL_POOL_MANAGER_ALLOCATE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x900, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+
+extern HYPER_HIDE_GLOBAL_DATA g_HyperHide;
 
 enum vm_call_reasons
 {
@@ -104,6 +107,15 @@ namespace hv
 	/// <param name="value"> If false, hypervisor is not visible via cpuid interface, If true, it become visible</param>
 	void hypervisor_visible(bool value)
 	{
+		// Gate: skip the vmcall unless the driver lifecycle is active, so a late IOCTL
+		// (e.g. mid-unload) cannot race a vmcall against hypervisor teardown. test_vmcall
+		// (bootstrap) is deliberately exempt from this gate.
+		if (g_HyperHide.LifecycleActive == 0)
+		{
+			LogInfo("hypervisor_visible skipped: driver lifecycle not active");
+			return;
+		}
+
 		if (value == true)
 			__vm_call(VMCALL_UNHIDE_HV_PRESENCE, 0, 0, 0);
 		else
@@ -155,6 +167,13 @@ namespace hv
 	/// </summary>
 	void dump_pool_manager()
 	{
+		// Gate: see hypervisor_visible — only run when the driver lifecycle is active.
+		if (g_HyperHide.LifecycleActive == 0)
+		{
+			LogInfo("dump_pool_manager skipped: driver lifecycle not active");
+			return;
+		}
+
 		__vm_call(VMCALL_DUMP_POOL_MANAGER, 0, 0, 0);
 	}
 
@@ -164,6 +183,8 @@ namespace hv
 	/// <returns> status </returns>
 	bool test_vmcall()
 	{
+		// Bootstrap path: deliberately NOT gated by g_HyperHide.LifecycleActive — the gate
+		// is only opened *after* this probe succeeds (see DriverEntry).
 		volatile SHORT statuses{};
 		KeGenericCallDpc(broadcast_test_vmcall, (PVOID)&statuses);
 
