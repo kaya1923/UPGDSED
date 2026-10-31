@@ -1,0 +1,21 @@
+ROLLBACK TO PRESERVED V5.1-FIXED
+
+1. Close x64dbg/x32dbg and stop both drivers:
+   powershell -ExecutionPolicy Bypass -File .\stop.ps1
+
+2. Run remove.ps1 without -DeleteDriverFiles to delete the demand-start services:
+   powershell -ExecutionPolicy Bypass -File .\remove.ps1
+
+3. Reinstall from the separately preserved archive:
+   HyperHide-Win10-19045-x64-v5.1-ntqueryobject-fix.zip
+
+Repository recovery point:
+   branch archive/v5.1-fixed
+   commit e6e69ba7acb80aa4707744ddd674cb7d1b1ebd28
+
+install.ps1 also creates a timestamped backup directory beside the script before
+overwriting an existing airhv.sys or HyperHideDrv.sys. Those backups can be copied
+back only while both services are stopped.
+
+If the target bluescreens, boot the normal Windows entry and do not retry v5.2
+until the new dump has been collected and compared with the two reference dumps.

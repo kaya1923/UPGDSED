@@ -19,6 +19,11 @@ vorhandene Arbeitsstände und gegebenenfalls AGENTS.md beachten.
 > Nächster Runtime-Schritt: v5.1 Early-Attach auf der HP-Bench. Runbook und
 > ZIPs liegen im bench-min Pack unter
 > `tools/flex-x32dbg/local-session/packages-20261029/`.
+>
+> 31.10.2026: airhv §4.4 CPUID-Cache (3b) gebaut —
+> `bin/HyperHide/HyperHide-Win10-19045-x64-v5.2-cpuid-cache.zip`,
+> Bericht `docs/BUILD-REPORT-airhv-cpuid-cache-20261031.md`. 3a war schon
+> `_MINIMAL`. Bench: Timing/Exit-Counts vs. Baseline `C4F55AD0…`.
 
 ## Arbeitsstand-Update 29.10.2026 (diese IDE-Instanz)
 

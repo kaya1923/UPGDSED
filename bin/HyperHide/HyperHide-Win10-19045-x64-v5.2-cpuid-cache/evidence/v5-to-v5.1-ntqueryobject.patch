@@ -1,0 +1,358 @@
+diff --git a/third_party/HyperHide-v5.1-ntqueryobject/third_party/HyperHide/HyperHideDrv/HookedFunctions.cpp b/vendor/HyperHide-v5.1/HyperHideDrv/HookedFunctions.cpp
+index a9857c6..f857510 100644
+--- a/third_party/HyperHide-v5.1-ntqueryobject/third_party/HyperHide/HyperHideDrv/HookedFunctions.cpp
++++ b/vendor/HyperHide-v5.1/HyperHideDrv/HookedFunctions.cpp
+@@ -12,6 +12,7 @@
+ #include "Ssdt.h"
+ #include "HookedFunctions.h"
+ #include "HypervisorGateway.h"
++#include "NtQueryObjectSafety.h"
+ 
+ CONST PKUSER_SHARED_DATA KuserSharedData = (PKUSER_SHARED_DATA)KUSER_SHARED_DATA_USERMODE;
+ 
+@@ -548,6 +549,78 @@ NTSTATUS NTAPI HookedNtSetInformationProcess(HANDLE ProcessHandle, PROCESSINFOCL
+ }
+ 
+ NTSTATUS (NTAPI* OriginalNtQueryObject)(HANDLE Handle, OBJECT_INFORMATION_CLASS ObjectInformationClass, PVOID ObjectInformation, ULONG ObjectInformationLength, PULONG ReturnLength);
++
++namespace
++{
++	constexpr WCHAR DebugObjectTypeName[] = L"DebugObject";
++	constexpr USHORT DebugObjectTypeNameLength = sizeof(DebugObjectTypeName) - sizeof(WCHAR);
++	constexpr ULONG NtQueryObjectSnapshotLimit = 1024 * 1024;
++	constexpr ULONG NtQueryObjectPoolTag = 'qOHh';
++
++	BOOLEAN RangeContains(PVOID Buffer, SIZE_T BufferLength, PVOID Address, SIZE_T AddressLength)
++	{
++		return NtQueryObjectSafety::RangeContains(
++			reinterpret_cast<NtQueryObjectSafety::Address>(Buffer), BufferLength,
++			reinterpret_cast<NtQueryObjectSafety::Address>(Address), AddressLength);
++	}
++
++	BOOLEAN RangesOverlap(PVOID First, SIZE_T FirstLength, PVOID Second, SIZE_T SecondLength)
++	{
++		return NtQueryObjectSafety::RangesOverlap(
++			reinterpret_cast<NtQueryObjectSafety::Address>(First), FirstLength,
++			reinterpret_cast<NtQueryObjectSafety::Address>(Second), SecondLength);
++	}
++
++	BOOLEAN IsDebugObjectTypeName(
++		const UNICODE_STRING& TypeName,
++		PVOID OriginalBuffer,
++		ULONG OriginalBufferLength,
++		PVOID Snapshot)
++	{
++		if (TypeName.Length != DebugObjectTypeNameLength ||
++			TypeName.MaximumLength < TypeName.Length ||
++			(TypeName.MaximumLength & (sizeof(WCHAR) - 1)) != 0 ||
++			TypeName.Buffer == nullptr ||
++			!RangeContains(OriginalBuffer, OriginalBufferLength, TypeName.Buffer, TypeName.MaximumLength))
++		{
++			return FALSE;
++		}
++
++		const SIZE_T Offset = reinterpret_cast<ULONG_PTR>(TypeName.Buffer) -
++			reinterpret_cast<ULONG_PTR>(OriginalBuffer);
++		WCHAR LocalName[RTL_NUMBER_OF(DebugObjectTypeName)]{};
++		RtlCopyMemory(LocalName, reinterpret_cast<UCHAR*>(Snapshot) + Offset, TypeName.Length);
++
++		UNICODE_STRING CapturedName{};
++		CapturedName.Buffer = LocalName;
++		CapturedName.Length = TypeName.Length;
++		CapturedName.MaximumLength = sizeof(LocalName);
++
++		UNICODE_STRING ExpectedName{};
++		RtlInitUnicodeString(&ExpectedName, DebugObjectTypeName);
++		return RtlEqualUnicodeString(&CapturedName, &ExpectedName, FALSE);
++	}
++
++	VOID SubtractDebuggerCounts(POBJECT_TYPE_INFORMATION UserType, ULONG ActiveDebuggers)
++	{
++		__try
++		{
++			ProbeForWrite(&UserType->TotalNumberOfObjects, sizeof(UserType->TotalNumberOfObjects), 1);
++			ProbeForWrite(&UserType->TotalNumberOfHandles, sizeof(UserType->TotalNumberOfHandles), 1);
++			UserType->TotalNumberOfObjects =
++				UserType->TotalNumberOfObjects > ActiveDebuggers ?
++				UserType->TotalNumberOfObjects - ActiveDebuggers : 0;
++			UserType->TotalNumberOfHandles =
++				UserType->TotalNumberOfHandles > ActiveDebuggers ?
++				UserType->TotalNumberOfHandles - ActiveDebuggers : 0;
++		}
++		__except (EXCEPTION_EXECUTE_HANDLER)
++		{
++			// Preserve the original syscall result if the user mapping changes.
++		}
++	}
++}
++
+ NTSTATUS NTAPI HookedNtQueryObject(
+ 	HANDLE                   Handle,
+ 	OBJECT_INFORMATION_CLASS ObjectInformationClass,
+@@ -560,51 +633,159 @@ NTSTATUS NTAPI HookedNtQueryObject(
+ 	if (Hider::IsHidden(IoGetCurrentProcess(), HIDE_NT_QUERY_OBJECT) == TRUE &&
+ 		NT_SUCCESS(Status) == TRUE &&
+ 		ExGetPreviousMode() == UserMode &&
+-		ObjectInformation != NULL)
++		ObjectInformation != NULL &&
++		ObjectInformationLength != 0)
+ 	{
++		// NtQueryObject accepts independent output and ReturnLength pointers.  If
++		// they overlap, the original syscall may have overwritten a field inside
++		// OBJECT_TYPE_INFORMATION (notably UNICODE_STRING::Buffer at +8 on x64).
++		// Never dereference or restore ReturnLength here; just skip post-processing.
++		if (ReturnLength != nullptr &&
++			RangesOverlap(ObjectInformation, ObjectInformationLength, ReturnLength, sizeof(*ReturnLength)))
++		{
++			return Status;
++		}
+ 
+ 		if (ObjectInformationClass == ObjectTypeInformation)
+ 		{
+-			UNICODE_STRING DebugObject;
+-			RtlInitUnicodeString(&DebugObject, L"DebugObject");
+-			POBJECT_TYPE_INFORMATION Type = (POBJECT_TYPE_INFORMATION)ObjectInformation;
++			const SIZE_T RequiredHeader =
++				FIELD_OFFSET(OBJECT_TYPE_INFORMATION, TotalNumberOfHandles) + sizeof(ULONG);
++			if (ObjectInformationLength < RequiredHeader)
++				return Status;
+ 
+-			if (RtlEqualUnicodeString(&Type->TypeName, &DebugObject, FALSE) == TRUE)
++			UNICODE_STRING TypeName{};
++			WCHAR LocalName[RTL_NUMBER_OF(DebugObjectTypeName)]{};
++			BOOLEAN IsDebugObject = FALSE;
++			__try
+ 			{
+-				BACKUP_RETURNLENGTH();
+-				Type->TotalNumberOfObjects -= g_HyperHide.NumberOfActiveDebuggers;
+-				Type->TotalNumberOfHandles -= g_HyperHide.NumberOfActiveDebuggers;
+-				RESTORE_RETURNLENGTH();
++				ProbeForRead(ObjectInformation, RequiredHeader, 1);
++				TypeName = reinterpret_cast<POBJECT_TYPE_INFORMATION>(ObjectInformation)->TypeName;
++				if (TypeName.Length == DebugObjectTypeNameLength &&
++					TypeName.MaximumLength >= TypeName.Length &&
++					(TypeName.MaximumLength & (sizeof(WCHAR) - 1)) == 0 &&
++					TypeName.Buffer != nullptr &&
++					RangeContains(ObjectInformation, ObjectInformationLength, TypeName.Buffer, TypeName.MaximumLength))
++				{
++					ProbeForRead(TypeName.Buffer, TypeName.Length, sizeof(WCHAR));
++					RtlCopyMemory(LocalName, TypeName.Buffer, TypeName.Length);
++					UNICODE_STRING CapturedName{};
++					CapturedName.Buffer = LocalName;
++					CapturedName.Length = TypeName.Length;
++					CapturedName.MaximumLength = sizeof(LocalName);
++					UNICODE_STRING ExpectedName{};
++					RtlInitUnicodeString(&ExpectedName, DebugObjectTypeName);
++					IsDebugObject = RtlEqualUnicodeString(&CapturedName, &ExpectedName, FALSE);
++				}
++			}
++			__except (EXCEPTION_EXECUTE_HANDLER)
++			{
++				return Status;
+ 			}
+ 
++			if (IsDebugObject)
++				SubtractDebuggerCounts(reinterpret_cast<POBJECT_TYPE_INFORMATION>(ObjectInformation),
++					g_HyperHide.NumberOfActiveDebuggers);
++
+ 			return Status;
+ 		}
+ 
+ 		else if (ObjectInformationClass == ObjectTypesInformation)
+ 		{
+-			UNICODE_STRING DebugObject;
+-			RtlInitUnicodeString(&DebugObject, L"DebugObject");
+-			POBJECT_ALL_INFORMATION ObjectAllInfo = (POBJECT_ALL_INFORMATION)ObjectInformation;
+-			UCHAR* ObjInfoLocation = (UCHAR*)ObjectAllInfo->ObjectTypeInformation;
+-			ULONG TotalObjects = ObjectAllInfo->NumberOfObjectsTypes;
++			const SIZE_T FirstEntryOffset = FIELD_OFFSET(OBJECT_ALL_INFORMATION, ObjectTypeInformation);
++			const SIZE_T RequiredEntryHeader =
++				FIELD_OFFSET(OBJECT_TYPE_INFORMATION, TotalNumberOfHandles) + sizeof(ULONG);
++			if (ObjectInformationLength < FirstEntryOffset + RequiredEntryHeader ||
++				ObjectInformationLength > NtQueryObjectSnapshotLimit)
++			{
++				return Status;
++			}
+ 
+-			BACKUP_RETURNLENGTH();
+-			for (ULONG i = 0; i < TotalObjects; i++)
++			PVOID Snapshot = ExAllocatePoolWithTag(NonPagedPoolNx, ObjectInformationLength, NtQueryObjectPoolTag);
++			if (Snapshot == nullptr)
++				return Status;
++
++			__try
++			{
++				ProbeForRead(ObjectInformation, ObjectInformationLength, 1);
++				RtlCopyMemory(Snapshot, ObjectInformation, ObjectInformationLength);
++			}
++			__except (EXCEPTION_EXECUTE_HANDLER)
++			{
++				ExFreePoolWithTag(Snapshot, NtQueryObjectPoolTag);
++				return Status;
++			}
++
++			const ULONG TotalObjects = reinterpret_cast<POBJECT_ALL_INFORMATION>(Snapshot)->NumberOfObjectsTypes;
++			if (TotalObjects > ObjectInformationLength / RequiredEntryHeader)
+ 			{
+-				POBJECT_TYPE_INFORMATION ObjectTypeInfo = (POBJECT_TYPE_INFORMATION)ObjInfoLocation;
+-				if (RtlEqualUnicodeString(&ObjectTypeInfo->TypeName, &DebugObject, FALSE) == TRUE)
++				ExFreePoolWithTag(Snapshot, NtQueryObjectPoolTag);
++				return Status;
++			}
++
++			SIZE_T EntryOffset = FirstEntryOffset;
++			SIZE_T DebugObjectEntryOffset = MAXULONG_PTR;
++			for (ULONG i = 0; i < TotalObjects; ++i)
++			{
++				if (EntryOffset > ObjectInformationLength - RequiredEntryHeader)
+ 				{
+-					ObjectTypeInfo->TotalNumberOfObjects -= g_HyperHide.NumberOfActiveDebuggers;
+-					ObjectTypeInfo->TotalNumberOfHandles -= g_HyperHide.NumberOfActiveDebuggers;
++					ExFreePoolWithTag(Snapshot, NtQueryObjectPoolTag);
++					return Status;
++				}
++
++				auto SnapshotType = reinterpret_cast<POBJECT_TYPE_INFORMATION>(
++					reinterpret_cast<UCHAR*>(Snapshot) + EntryOffset);
++				const UNICODE_STRING TypeName = SnapshotType->TypeName;
++				if (TypeName.Length > TypeName.MaximumLength ||
++					(TypeName.Length & (sizeof(WCHAR) - 1)) != 0 ||
++					(TypeName.MaximumLength & (sizeof(WCHAR) - 1)) != 0 ||
++					(TypeName.MaximumLength != 0 && TypeName.Buffer == nullptr) ||
++					!RangeContains(ObjectInformation, ObjectInformationLength,
++						TypeName.Buffer, TypeName.MaximumLength))
++				{
++					ExFreePoolWithTag(Snapshot, NtQueryObjectPoolTag);
++					return Status;
++				}
++
++				if (IsDebugObjectTypeName(TypeName, ObjectInformation,
++					ObjectInformationLength, Snapshot))
++				{
++					DebugObjectEntryOffset = EntryOffset;
++				}
++
++				if (i + 1 < TotalObjects)
++				{
++					NtQueryObjectSafety::Address StringEnd = 0;
++					NtQueryObjectSafety::Address Next = 0;
++					if (!NtQueryObjectSafety::CheckedRangeEnd(
++						reinterpret_cast<NtQueryObjectSafety::Address>(TypeName.Buffer),
++						TypeName.MaximumLength, &StringEnd) ||
++						!NtQueryObjectSafety::AlignUp(StringEnd, sizeof(PVOID), &Next))
++					{
++						ExFreePoolWithTag(Snapshot, NtQueryObjectPoolTag);
++						return Status;
++					}
++					if (Next <= reinterpret_cast<ULONG_PTR>(ObjectInformation) + EntryOffset ||
++						!RangeContains(ObjectInformation, ObjectInformationLength,
++							reinterpret_cast<PVOID>(Next), RequiredEntryHeader))
++					{
++						ExFreePoolWithTag(Snapshot, NtQueryObjectPoolTag);
++						return Status;
++					}
++					EntryOffset = Next - reinterpret_cast<ULONG_PTR>(ObjectInformation);
+ 				}
+-				ObjInfoLocation = (UCHAR*)ObjectTypeInfo->TypeName.Buffer;
+-				ObjInfoLocation += ObjectTypeInfo->TypeName.MaximumLength;
+-				ULONG64 Tmp = ((ULONG64)ObjInfoLocation) & -(LONG64)sizeof(PVOID);
+-				if ((ULONG64)Tmp != (ULONG64)ObjInfoLocation)
+-					Tmp += sizeof(PVOID);
+-				ObjInfoLocation = ((UCHAR*)Tmp);
+ 			}
+-			RESTORE_RETURNLENGTH();
++
++			// Only modify the user buffer after the complete snapshot and pointer
++			// chain have passed validation, so malformed later entries cannot leave
++			// a partially filtered result behind.
++			if (DebugObjectEntryOffset != MAXULONG_PTR)
++			{
++				SubtractDebuggerCounts(reinterpret_cast<POBJECT_TYPE_INFORMATION>(
++					reinterpret_cast<UCHAR*>(ObjectInformation) + DebugObjectEntryOffset),
++					g_HyperHide.NumberOfActiveDebuggers);
++			}
++
++			ExFreePoolWithTag(Snapshot, NtQueryObjectPoolTag);
+ 			return Status;
+ 		}
+ 	}
+diff --git a/third_party/HyperHide-v5.1-ntqueryobject/third_party/HyperHide/HyperHideDrv/HyperHideDrv.vcxproj b/vendor/HyperHide-v5.1/HyperHideDrv/HyperHideDrv.vcxproj
+index f72b049..8549879 100644
+--- a/third_party/HyperHide-v5.1-ntqueryobject/third_party/HyperHide/HyperHideDrv/HyperHideDrv.vcxproj
++++ b/vendor/HyperHide-v5.1/HyperHideDrv/HyperHideDrv.vcxproj
+@@ -111,6 +111,7 @@
+     <ClInclude Include="Log.h" />
+     <ClInclude Include="Notifiers.h" />
+     <ClInclude Include="Ntapi.h" />
++	<ClInclude Include="NtQueryObjectSafety.h" />
+     <ClInclude Include="Ntenums.h" />
+     <ClInclude Include="Ntstructs.h" />
+     <ClInclude Include="Peb.h" />
+@@ -127,4 +128,4 @@
+   <ImportGroup Label="ExtensionTargets">
+     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+   </ImportGroup>
+-</Project>
+\ No newline at end of file
++</Project>
+diff --git a/vendor/HyperHide-v5.1/HyperHideDrv/NtQueryObjectSafety.h b/vendor/HyperHide-v5.1/HyperHideDrv/NtQueryObjectSafety.h
+new file mode 100644
+index 0000000..d6d3421
+--- /dev/null
++++ b/vendor/HyperHide-v5.1/HyperHideDrv/NtQueryObjectSafety.h
+@@ -0,0 +1,55 @@
++#pragma once
++
++#include <stddef.h>
++
++namespace NtQueryObjectSafety
++{
++	using Address = unsigned __int64;
++
++	inline bool CheckedRangeEnd(Address Start, size_t Length, Address* End)
++	{
++		constexpr Address MaximumAddress = ~static_cast<Address>(0);
++		if (End == nullptr || Length > MaximumAddress - Start)
++			return false;
++
++		*End = Start + Length;
++		return true;
++	}
++
++	inline bool RangeContains(Address Buffer, size_t BufferLength, Address Value, size_t ValueLength)
++	{
++		Address BufferEnd = 0;
++		Address ValueEnd = 0;
++		return CheckedRangeEnd(Buffer, BufferLength, &BufferEnd) &&
++			CheckedRangeEnd(Value, ValueLength, &ValueEnd) &&
++			Value >= Buffer && ValueEnd <= BufferEnd;
++	}
++
++	inline bool RangesOverlap(Address First, size_t FirstLength, Address Second, size_t SecondLength)
++	{
++		Address FirstEnd = 0;
++		Address SecondEnd = 0;
++		if (!CheckedRangeEnd(First, FirstLength, &FirstEnd) ||
++			!CheckedRangeEnd(Second, SecondLength, &SecondEnd))
++		{
++			// An overflowing range is never safe to post-process.
++			return true;
++		}
++
++		return First < SecondEnd && Second < FirstEnd;
++	}
++
++	inline bool AlignUp(Address Value, size_t Alignment, Address* Result)
++	{
++		if (Result == nullptr || Alignment == 0 || (Alignment & (Alignment - 1)) != 0)
++			return false;
++
++		constexpr Address MaximumAddress = ~static_cast<Address>(0);
++		const Address Mask = Alignment - 1;
++		if (Value > MaximumAddress - Mask)
++			return false;
++
++		*Result = (Value + Mask) & ~Mask;
++		return true;
++	}
++}

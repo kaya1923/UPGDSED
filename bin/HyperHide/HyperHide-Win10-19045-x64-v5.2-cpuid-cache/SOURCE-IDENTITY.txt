@@ -1,0 +1,17 @@
+﻿HyperHide v5.2 + airhv CPUID-cache (§4.4 / 2026-10-31)
+
+Basis: v5.2-kusd-lifecycle HyperHideDrv unchanged.
+airhv: Release_Minimal rebuild with leaf0 + hidden-0x4xxxxxxx host CPUID cache.
+Build: vendor/HyperHide/airhv/build-release-minimal-x64.ps1
+MSVC 14.51.36231, SDK/WDK 10.0.26100.0
+
+airhv.sys SHA-256:
+494166ED8CD327447EABBFCC28A2C2F64ED91C646BE6D37ED896DCD0FE09F9DA
+
+Unchanged HyperHideDrv.sys SHA-256 (from v5.2 package):
+2798C37855CA06B6FCA64B32E8794ED0E4D02F16793D0BA94369DB19EEA6E681
+
+Prior airhv (v5/v5.1/v5.2 known) SHA-256:
+C4F55AD0351B42CB6660538197AD3A7D9E7075676EC0920AC7A5900227E3DD6F
+
+Bench validation still required (no driver load on build PC).
