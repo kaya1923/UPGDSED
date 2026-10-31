@@ -31,6 +31,10 @@ vorhandene Arbeitsstände und gegebenenfalls AGENTS.md beachten.
 > 31.10.2026: PROMPT-03 umgesetzt → `v5.4-vmmcall-lifecycle-fix`
 > (`docs/BUILD-REPORT-v5.4-vmmcall-lifecycle-20261031.md`). airhv owns VMXOFF;
 > HyperHide drains+unhooks only. Bench: 20+ Stop/Start.
+>
+> 31.10.2026: Dump 103126 (#UD vmcall) → `v5.5-vmcall-ud-guard` (SEH + stop
+> order wait + fixed install hashes). Bericht
+> `docs/BUILD-REPORT-v5.5-vmcall-ud-guard-20261031.md`.
 
 ## Arbeitsstand-Update 29.10.2026 (diese IDE-Instanz)
 

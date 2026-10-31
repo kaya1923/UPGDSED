@@ -52,6 +52,49 @@ namespace hv
 		return InterlockedCompareExchange(&g_HyperHide.VmcallState, 0, 0);
 	}
 
+	// VMCALL while airhv is VMXOFF raises #UD (0xC000001D) — root cause of 0x1E dump 103126.
+	// Must be DISPATCH_LEVEL-safe (used from KeGenericCallDpc callbacks): SEH only,
+	// no IoGetDeviceObjectPointer here.
+	static bool SafeVmCall(unsigned __int64 reason, unsigned __int64 rdx, unsigned __int64 r8, unsigned __int64 r9)
+	{
+		__try
+		{
+			return __vm_call(reason, rdx, r8, r9);
+		}
+		__except (GetExceptionCode() == (NTSTATUS)0xC000001DL ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+		{
+			LogError("vmcall #UD (reason=%llu) — hypervisor not in VMX operation", reason);
+			InterlockedExchange(&g_HyperHide.VmcallState, VMCALL_STATE_OFFLINE);
+			InterlockedExchange8(reinterpret_cast<volatile CHAR*>(&g_HyperHide.LifecycleActive), 0);
+			return false;
+		}
+	}
+
+	static bool SafeVmCallEx(
+		unsigned __int64 reason,
+		unsigned __int64 rdx,
+		unsigned __int64 r8,
+		unsigned __int64 r9,
+		unsigned __int64 r10,
+		unsigned __int64 r11,
+		unsigned __int64 r12,
+		unsigned __int64 r13,
+		unsigned __int64 r14,
+		unsigned __int64 r15)
+	{
+		__try
+		{
+			return __vm_call_ex(reason, rdx, r8, r9, r10, r11, r12, r13, r14, r15);
+		}
+		__except (GetExceptionCode() == (NTSTATUS)0xC000001DL ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+		{
+			LogError("vmcall_ex #UD (reason=%llu) — hypervisor not in VMX operation", reason);
+			InterlockedExchange(&g_HyperHide.VmcallState, VMCALL_STATE_OFFLINE);
+			InterlockedExchange8(reinterpret_cast<volatile CHAR*>(&g_HyperHide.LifecycleActive), 0);
+			return false;
+		}
+	}
+
 	void set_vmcall_state(LONG NewState)
 	{
 		InterlockedExchange(&g_HyperHide.VmcallState, NewState);
@@ -94,7 +137,7 @@ namespace hv
 		const LONG state = ReadVmcallState();
 		if (state != VMCALL_STATE_OFFLINE)
 		{
-			__vm_call(VMCALL_VMXOFF, 0, 0, 0);
+			SafeVmCall(VMCALL_VMXOFF, 0, 0, 0);
 		}
 		InflightLeave();
 		KeSignalCallDpcSynchronize(SystemArgument2);
@@ -118,7 +161,7 @@ namespace hv
 		const BOOLEAN go = (ReadVmcallState() == VMCALL_STATE_ACTIVE);
 		if (go)
 		{
-			if (__vm_call_ex(VMCALL_EPT_HOOK_FUNCTION, (unsigned __int64)args->target_address,
+			if (SafeVmCallEx(VMCALL_EPT_HOOK_FUNCTION, (unsigned __int64)args->target_address,
 				(unsigned __int64)args->hook_function, (unsigned __int64)args->origin_function, args->current_cr3, 0, 0, 0, 0, 0))
 			{
 				InterlockedIncrement16(&args->statuses);
@@ -147,7 +190,7 @@ namespace hv
 		const BOOLEAN go = (ReadVmcallState() != VMCALL_STATE_OFFLINE);
 		if (go)
 		{
-			if (__vm_call(VMCALL_EPT_UNHOOK_FUNCTION, args->unhook_all_functions,
+			if (SafeVmCall(VMCALL_EPT_UNHOOK_FUNCTION, args->unhook_all_functions,
 				(unsigned __int64)args->function_to_unhook, args->current_cr3))
 			{
 				InterlockedIncrement16(&args->statuses);
@@ -167,7 +210,7 @@ namespace hv
 		const BOOLEAN go = (ReadVmcallState() == VMCALL_STATE_ACTIVE);
 		if (go)
 		{
-			if (__vm_call(VMCALL_TEST, 0, 0, 0))
+			if (SafeVmCall(VMCALL_TEST, 0, 0, 0))
 			{
 				InterlockedIncrement16(statuses);
 			}
@@ -195,9 +238,9 @@ namespace hv
 		}
 
 		if (value == true)
-			__vm_call(VMCALL_UNHIDE_HV_PRESENCE, 0, 0, 0);
+			SafeVmCall(VMCALL_UNHIDE_HV_PRESENCE, 0, 0, 0);
 		else
-			__vm_call(VMCALL_HIDE_HV_PRESENCE, 0, 0, 0);
+			SafeVmCall(VMCALL_HIDE_HV_PRESENCE, 0, 0, 0);
 
 		InflightLeave();
 	}
@@ -237,7 +280,7 @@ namespace hv
 			return;
 		}
 
-		__vm_call(VMCALL_DUMP_POOL_MANAGER, 0, 0, 0);
+		SafeVmCall(VMCALL_DUMP_POOL_MANAGER, 0, 0, 0);
 		InflightLeave();
 	}
 
