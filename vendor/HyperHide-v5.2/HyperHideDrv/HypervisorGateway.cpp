@@ -4,8 +4,11 @@
 #include "vmintrin.h"
 #include "Ntapi.h"
 #include "Log.h"
+#include "GlobalData.h"
 
 #define IOCTL_POOL_MANAGER_ALLOCATE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x900, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+
+extern HYPER_HIDE_GLOBAL_DATA g_HyperHide;
 
 enum vm_call_reasons
 {
@@ -104,6 +107,14 @@ namespace hv
 	/// <param name="value"> If false, hypervisor is not visible via cpuid interface, If true, it become visible</param>
 	void hypervisor_visible(bool value)
 	{
+		// Skip if DriverEntry is incomplete or unload has started. Hook/unhook
+		// and test_vmcall are intentionally not gated (see Driver.cpp).
+		if (g_HyperHide.LifecycleActive == 0)
+		{
+			LogInfo("hypervisor_visible skipped: driver lifecycle not active");
+			return;
+		}
+
 		if (value == true)
 			__vm_call(VMCALL_UNHIDE_HV_PRESENCE, 0, 0, 0);
 		else
@@ -155,6 +166,12 @@ namespace hv
 	/// </summary>
 	void dump_pool_manager()
 	{
+		if (g_HyperHide.LifecycleActive == 0)
+		{
+			LogInfo("dump_pool_manager skipped: driver lifecycle not active");
+			return;
+		}
+
 		__vm_call(VMCALL_DUMP_POOL_MANAGER, 0, 0, 0);
 	}
 

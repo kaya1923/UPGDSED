@@ -13,10 +13,16 @@
 
 HYPER_HIDE_GLOBAL_DATA g_HyperHide = { 0 };
 
+static VOID SetLifecycleActive(_In_ UCHAR Value)
+{
+	InterlockedExchange8(reinterpret_cast<volatile CHAR*>(&g_HyperHide.LifecycleActive), static_cast<CHAR>(Value));
+}
+
 VOID DrvUnload(PDRIVER_OBJECT  DriverObject)
 {
-	// Close the vmcall gate first so no late vmcall races hypervisor teardown.
-	g_HyperHide.LifecycleActive = 0;
+	// Close the IOCTL vmcall gate before teardown so a late hypervisor_visible
+	// cannot race unhook / hypervisor shutdown. Hook teardown still uses DPCs.
+	SetLifecycleActive(0);
 
 	Hider::Uninitialize();
 
@@ -78,7 +84,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 
 	RtlGetVersion(&OsVersion);
 	g_HyperHide.CurrentWindowsBuildNumber = OsVersion.dwBuildNumber;
-	g_HyperHide.LifecycleActive = 0; // vmcall gate stays closed until the test_vmcall probe succeeds
+	SetLifecycleActive(0);
 
 	__try
 	{
@@ -90,8 +96,6 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 		return STATUS_DEVICE_NOT_CONNECTED;
 	}
 	 
-	g_HyperHide.LifecycleActive = 1; // bootstrap probe succeeded — open the vmcall gate
-
 	LogInfo("HyperVisor On");
 
 	if (GetOffsets() == FALSE)
@@ -112,7 +116,6 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 	NTSTATUS NotifyStatus = PsSetCreateThreadNotifyRoutine(ThreadNotifyRoutine);
 	if(NT_SUCCESS(NotifyStatus) == FALSE)
 	{
-		g_HyperHide.LifecycleActive = 0; // rollback teardown — close the vmcall gate
 		Hider::Uninitialize();
 		return NotifyStatus;
 	}
@@ -122,7 +125,6 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 	NotifyStatus = PsSetCreateProcessNotifyRoutine(ProcessNotifyRoutine, FALSE);
 	if (NT_SUCCESS(NotifyStatus) == FALSE)
 	{
-		g_HyperHide.LifecycleActive = 0; // rollback teardown — close the vmcall gate
 		Hider::Uninitialize();
 		PsRemoveCreateThreadNotifyRoutine(ThreadNotifyRoutine);
 		return NotifyStatus;
@@ -140,7 +142,6 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 
 	if (NT_SUCCESS(HookStatus) == FALSE)
 	{
-		g_HyperHide.LifecycleActive = 0; // rollback teardown — close the vmcall gate
 		hv::unhook_all_functions();
 		PsRemoveCreateThreadNotifyRoutine(ThreadNotifyRoutine);
 		PsSetCreateProcessNotifyRoutine(ProcessNotifyRoutine, TRUE);
@@ -163,6 +164,9 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 	Driver->Flags |= DO_BUFFERED_IO;
 
 	IoCreateSymbolicLink(&DosDeviceName, &DriverName);
+
+	// Open the IOCTL vmcall gate only after full init (device + hooks ready).
+	SetLifecycleActive(1);
 	
 	LogInfo("Driver initialized");
 	

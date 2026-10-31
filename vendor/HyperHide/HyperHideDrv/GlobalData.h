@@ -27,9 +27,8 @@ typedef struct _HYPER_HIDE_GLOBAL_DATA
 {
 	ULONG CurrentWindowsBuildNumber;
 	ULONG NumberOfActiveDebuggers;
-	// Lifecycle guard for direct (non-DPC) vmcall sites: 0 = closed (driver not yet
-	// initialized or being torn down), 1 = open (safe to issue hypervisor_visible /
-	// dump_pool_manager vmcalls). Set once after the test_vmcall bootstrap probe and
-	// cleared at the start of unloading (and on the DriverEntry rollback path).
+	// Gates direct (non-DPC) vmcalls from hypervisor_visible / dump_pool_manager.
+	// 0 = DriverEntry incomplete or unload started; 1 = fully initialized.
+	// Hook/unhook/test_vmcall paths are intentionally NOT gated.
 	volatile UCHAR LifecycleActive;
 }HYPER_HIDE_GLOBAL_DATA,*PHYPER_HIDE_GLOBAL_DATA;

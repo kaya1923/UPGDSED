@@ -24,6 +24,9 @@ vorhandene Arbeitsstände und gegebenenfalls AGENTS.md beachten.
 > `bin/HyperHide/HyperHide-Win10-19045-x64-v5.2-cpuid-cache.zip`,
 > Bericht `docs/BUILD-REPORT-airhv-cpuid-cache-20261031.md`. 3a war schon
 > `_MINIMAL`. Bench: Timing/Exit-Counts vs. Baseline `C4F55AD0…`.
+>
+> 31.10.2026: LifecycleActive-Review — IDE-Patch korrigiert und als
+> `v5.3-lifecycle-gate` gebaut (`docs/BUILD-REPORT-v5.3-lifecycle-gate-20261031.md`).
 
 ## Arbeitsstand-Update 29.10.2026 (diese IDE-Instanz)
 

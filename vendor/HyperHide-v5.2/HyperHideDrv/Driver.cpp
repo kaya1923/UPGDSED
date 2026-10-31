@@ -13,8 +13,17 @@
 
 HYPER_HIDE_GLOBAL_DATA g_HyperHide = { 0 };
 
+static VOID SetLifecycleActive(_In_ UCHAR Value)
+{
+	InterlockedExchange8(reinterpret_cast<volatile CHAR*>(&g_HyperHide.LifecycleActive), static_cast<CHAR>(Value));
+}
+
 VOID DrvUnload(PDRIVER_OBJECT  DriverObject)
 {
+	// Close the IOCTL vmcall gate before teardown so a late hypervisor_visible
+	// cannot race unhook / hypervisor shutdown. Hook teardown still uses DPCs.
+	SetLifecycleActive(0);
+
 	Hider::Uninitialize();
 
 	LARGE_INTEGER WaitTime;
@@ -75,6 +84,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 
 	RtlGetVersion(&OsVersion);
 	g_HyperHide.CurrentWindowsBuildNumber = OsVersion.dwBuildNumber;
+	SetLifecycleActive(0);
 
 	__try
 	{
@@ -154,6 +164,9 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT Driver, PCUNICODE_STRING Reg)
 	Driver->Flags |= DO_BUFFERED_IO;
 
 	IoCreateSymbolicLink(&DosDeviceName, &DriverName);
+
+	// Open the IOCTL vmcall gate only after full init (device + hooks ready).
+	SetLifecycleActive(1);
 	
 	LogInfo("Driver initialized");
 	

@@ -27,4 +27,8 @@ typedef struct _HYPER_HIDE_GLOBAL_DATA
 {
 	ULONG CurrentWindowsBuildNumber;
 	ULONG NumberOfActiveDebuggers;
+	// Gates direct (non-DPC) vmcalls from hypervisor_visible / dump_pool_manager.
+	// 0 = DriverEntry incomplete or unload started; 1 = fully initialized.
+	// Hook/unhook/test_vmcall paths are intentionally NOT gated.
+	volatile UCHAR LifecycleActive;
 }HYPER_HIDE_GLOBAL_DATA,*PHYPER_HIDE_GLOBAL_DATA;

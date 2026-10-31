@@ -107,9 +107,8 @@ namespace hv
 	/// <param name="value"> If false, hypervisor is not visible via cpuid interface, If true, it become visible</param>
 	void hypervisor_visible(bool value)
 	{
-		// Gate: skip the vmcall unless the driver lifecycle is active, so a late IOCTL
-		// (e.g. mid-unload) cannot race a vmcall against hypervisor teardown. test_vmcall
-		// (bootstrap) is deliberately exempt from this gate.
+		// Skip if DriverEntry is incomplete or unload has started. Hook/unhook
+		// and test_vmcall are intentionally not gated (see Driver.cpp).
 		if (g_HyperHide.LifecycleActive == 0)
 		{
 			LogInfo("hypervisor_visible skipped: driver lifecycle not active");
@@ -167,7 +166,6 @@ namespace hv
 	/// </summary>
 	void dump_pool_manager()
 	{
-		// Gate: see hypervisor_visible — only run when the driver lifecycle is active.
 		if (g_HyperHide.LifecycleActive == 0)
 		{
 			LogInfo("dump_pool_manager skipped: driver lifecycle not active");
@@ -183,8 +181,7 @@ namespace hv
 	/// <returns> status </returns>
 	bool test_vmcall()
 	{
-		// Bootstrap path: deliberately NOT gated by g_HyperHide.LifecycleActive — the gate
-		// is only opened *after* this probe succeeds (see DriverEntry).
+		// Bootstrap path: not gated — runs before LifecycleActive is opened.
 		volatile SHORT statuses{};
 		KeGenericCallDpc(broadcast_test_vmcall, (PVOID)&statuses);
 
