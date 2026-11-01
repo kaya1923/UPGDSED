@@ -120,6 +120,14 @@ struct __mtrr_info
     unsigned __int8 default_memory_type;
 };
 
+struct __cpuid_regs_cache
+{
+    unsigned __int32 eax;
+    unsigned __int32 ebx;
+    unsigned __int32 ecx;
+    unsigned __int32 edx;
+};
+
 struct __vmm_context
 {
     __vcpu** vcpu_table;
@@ -128,6 +136,11 @@ struct __vmm_context
     unsigned __int32 processor_count;
     unsigned __int32 highest_basic_leaf;
     bool hv_presence;
+    // Host CPUID snapshots filled once at VMM init (see HANDOFF-CPUID-TSC-OPTIMIZE §4.4).
+    // cpuid_hvvendor_cache holds __cpuidex(highest_basic_leaf, 0) — the base used for the
+    // hidden 0x40000000..0x4FFFFFFF path; hv_presence gating is applied on read.
+    __cpuid_regs_cache cpuid_leaf0_cache;
+    __cpuid_regs_cache cpuid_hvvendor_cache;
 };
 
 extern __vmm_context* g_vmm_context;

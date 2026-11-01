@@ -198,6 +198,18 @@ bool allocate_vmm_context()
 
 	__cpuid((int*)&cpuid_reg.eax, 0);
 	g_vmm_context->highest_basic_leaf = cpuid_reg.eax;
+	g_vmm_context->cpuid_leaf0_cache.eax = cpuid_reg.eax;
+	g_vmm_context->cpuid_leaf0_cache.ebx = cpuid_reg.ebx;
+	g_vmm_context->cpuid_leaf0_cache.ecx = cpuid_reg.ecx;
+	g_vmm_context->cpuid_leaf0_cache.edx = cpuid_reg.edx;
+
+	// Same host query the hidden 0x4xxxxxxx path used to issue on every guest CPUID.
+	__cpuid_info hv_range = { 0 };
+	__cpuidex((int*)&hv_range.eax, g_vmm_context->highest_basic_leaf, 0);
+	g_vmm_context->cpuid_hvvendor_cache.eax = hv_range.eax;
+	g_vmm_context->cpuid_hvvendor_cache.ebx = hv_range.ebx;
+	g_vmm_context->cpuid_hvvendor_cache.ecx = hv_range.ecx;
+	g_vmm_context->cpuid_hvvendor_cache.edx = hv_range.edx;
 
 	return true;
 }

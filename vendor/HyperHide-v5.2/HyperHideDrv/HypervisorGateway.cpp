@@ -4,8 +4,11 @@
 #include "vmintrin.h"
 #include "Ntapi.h"
 #include "Log.h"
+#include "GlobalData.h"
 
 #define IOCTL_POOL_MANAGER_ALLOCATE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x900, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+
+extern HYPER_HIDE_GLOBAL_DATA g_HyperHide;
 
 enum vm_call_reasons
 {
@@ -27,9 +30,116 @@ enum invept_type
 
 namespace hv
 {
+	static ULONG CurrentCpuIndex()
+	{
+		const ULONG cpu = KeGetCurrentProcessorNumberEx(NULL);
+		return (cpu < MAXIMUM_PROCESSORS) ? cpu : 0;
+	}
+
+	static VOID InflightEnter()
+	{
+		InterlockedIncrement(&g_HyperHide.VmcallInflight[CurrentCpuIndex()]);
+	}
+
+	static VOID InflightLeave()
+	{
+		InterlockedDecrement(&g_HyperHide.VmcallInflight[CurrentCpuIndex()]);
+	}
+
+	static LONG ReadVmcallState()
+	{
+		KeMemoryBarrier();
+		return InterlockedCompareExchange(&g_HyperHide.VmcallState, 0, 0);
+	}
+
+	// VMCALL while airhv is VMXOFF raises #UD (0xC000001D) — root cause of 0x1E dump 103126.
+	// Must be DISPATCH_LEVEL-safe (used from KeGenericCallDpc callbacks): SEH only,
+	// no IoGetDeviceObjectPointer here.
+	static bool SafeVmCall(unsigned __int64 reason, unsigned __int64 rdx, unsigned __int64 r8, unsigned __int64 r9)
+	{
+		__try
+		{
+			return __vm_call(reason, rdx, r8, r9);
+		}
+		__except (GetExceptionCode() == (NTSTATUS)0xC000001DL ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+		{
+			LogError("vmcall #UD (reason=%llu) — hypervisor not in VMX operation", reason);
+			InterlockedExchange(&g_HyperHide.VmcallState, VMCALL_STATE_OFFLINE);
+			InterlockedExchange8(reinterpret_cast<volatile CHAR*>(&g_HyperHide.LifecycleActive), 0);
+			return false;
+		}
+	}
+
+	static bool SafeVmCallEx(
+		unsigned __int64 reason,
+		unsigned __int64 rdx,
+		unsigned __int64 r8,
+		unsigned __int64 r9,
+		unsigned __int64 r10,
+		unsigned __int64 r11,
+		unsigned __int64 r12,
+		unsigned __int64 r13,
+		unsigned __int64 r14,
+		unsigned __int64 r15)
+	{
+		__try
+		{
+			return __vm_call_ex(reason, rdx, r8, r9, r10, r11, r12, r13, r14, r15);
+		}
+		__except (GetExceptionCode() == (NTSTATUS)0xC000001DL ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+		{
+			LogError("vmcall_ex #UD (reason=%llu) — hypervisor not in VMX operation", reason);
+			InterlockedExchange(&g_HyperHide.VmcallState, VMCALL_STATE_OFFLINE);
+			InterlockedExchange8(reinterpret_cast<volatile CHAR*>(&g_HyperHide.LifecycleActive), 0);
+			return false;
+		}
+	}
+
+	void set_vmcall_state(LONG NewState)
+	{
+		InterlockedExchange(&g_HyperHide.VmcallState, NewState);
+		KeMemoryBarrier();
+		const UCHAR active = (NewState == VMCALL_STATE_ACTIVE) ? 1 : 0;
+		InterlockedExchange8(reinterpret_cast<volatile CHAR*>(&g_HyperHide.LifecycleActive), static_cast<CHAR>(active));
+	}
+
+	void wait_for_vmcall_drain()
+	{
+		LARGE_INTEGER delay;
+		delay.QuadPart = -1000000LL; // 100ms
+
+		for (ULONG attempt = 0; attempt < 50; ++attempt) // ~5s max
+		{
+			BOOLEAN busy = FALSE;
+			for (ULONG i = 0; i < MAXIMUM_PROCESSORS; ++i)
+			{
+				if (InterlockedCompareExchange(&g_HyperHide.VmcallInflight[i], 0, 0) != 0)
+				{
+					busy = TRUE;
+					break;
+				}
+			}
+
+			if (busy == FALSE)
+				return;
+
+			LogInfo("still in flight vmcall at unload (attempt %lu)", attempt);
+			KeDelayExecutionThread(KernelMode, FALSE, &delay);
+		}
+
+		LogError("vmcall drain timed out; continuing unload");
+	}
+
 	void broadcast_vmoff(KDPC*, PVOID, PVOID SystemArgument1, PVOID SystemArgument2)
 	{
-		__vm_call(VMCALL_VMXOFF, 0, 0, 0);
+		// Teardown path: only after drain (caller must ensure inflight==0).
+		InflightEnter();
+		const LONG state = ReadVmcallState();
+		if (state != VMCALL_STATE_OFFLINE)
+		{
+			SafeVmCall(VMCALL_VMXOFF, 0, 0, 0);
+		}
+		InflightLeave();
 		KeSignalCallDpcSynchronize(SystemArgument2);
 		KeSignalCallDpcDone(SystemArgument1);
 	}
@@ -42,15 +152,22 @@ namespace hv
 		unsigned __int64 current_cr3;
 		volatile SHORT statuses;
 	};
+
 	void broadcast_hook_function(KDPC*, PVOID DeferredContext, PVOID SystemArgument1, PVOID SystemArgument2)
 	{
 		const auto args = reinterpret_cast<HookFunctionArgs*>(DeferredContext);
 
-		if (__vm_call_ex(VMCALL_EPT_HOOK_FUNCTION, (unsigned __int64)args->target_address,
-			(unsigned __int64)args->hook_function, (unsigned __int64)args->origin_function, args->current_cr3, 0, 0, 0, 0, 0))
+		InflightEnter();
+		const BOOLEAN go = (ReadVmcallState() == VMCALL_STATE_ACTIVE);
+		if (go)
 		{
-			InterlockedIncrement16(&args->statuses);
+			if (SafeVmCallEx(VMCALL_EPT_HOOK_FUNCTION, (unsigned __int64)args->target_address,
+				(unsigned __int64)args->hook_function, (unsigned __int64)args->origin_function, args->current_cr3, 0, 0, 0, 0, 0))
+			{
+				InterlockedIncrement16(&args->statuses);
+			}
 		}
+		InflightLeave();
 
 		KeSignalCallDpcSynchronize(SystemArgument2);
 		KeSignalCallDpcDone(SystemArgument1);
@@ -63,15 +180,23 @@ namespace hv
 		unsigned __int64 current_cr3;
 		volatile SHORT statuses;
 	};
+
 	void broadcast_unhook_function(KDPC*, PVOID DeferredContext, PVOID SystemArgument1, PVOID SystemArgument2)
 	{
 		const auto args = reinterpret_cast<UnHookFunctionArgs*>(DeferredContext);
 
-		if (__vm_call(VMCALL_EPT_UNHOOK_FUNCTION, args->unhook_all_functions,
-			(unsigned __int64)args->function_to_unhook, args->current_cr3))
+		InflightEnter();
+		// Allow unhook while DRAINING; block only when already OFFLINE.
+		const BOOLEAN go = (ReadVmcallState() != VMCALL_STATE_OFFLINE);
+		if (go)
 		{
-			InterlockedIncrement16(&args->statuses);
+			if (SafeVmCall(VMCALL_EPT_UNHOOK_FUNCTION, args->unhook_all_functions,
+				(unsigned __int64)args->function_to_unhook, args->current_cr3))
+			{
+				InterlockedIncrement16(&args->statuses);
+			}
 		}
+		InflightLeave();
 
 		KeSignalCallDpcSynchronize(SystemArgument2);
 		KeSignalCallDpcDone(SystemArgument1);
@@ -81,39 +206,45 @@ namespace hv
 	{
 		const auto statuses = reinterpret_cast<volatile SHORT*>(DeferredContext);
 
-		if (__vm_call(VMCALL_TEST, 0, 0, 0))
+		InflightEnter();
+		const BOOLEAN go = (ReadVmcallState() == VMCALL_STATE_ACTIVE);
+		if (go)
 		{
-			InterlockedIncrement16(statuses);
+			if (SafeVmCall(VMCALL_TEST, 0, 0, 0))
+			{
+				InterlockedIncrement16(statuses);
+			}
 		}
+		InflightLeave();
 
 		KeSignalCallDpcSynchronize(SystemArgument2);
 		KeSignalCallDpcDone(SystemArgument1);
 	}
 
-	/// <summary>
-	/// Turn off virtual machine
-	/// </summary>
 	void vmoff()
 	{
 		KeGenericCallDpc(broadcast_vmoff, NULL);
 	}
 
-	/// <summary>
-	/// Set/Unset presence of hypervisor
-	/// </summary>
-	/// <param name="value"> If false, hypervisor is not visible via cpuid interface, If true, it become visible</param>
 	void hypervisor_visible(bool value)
 	{
+		InflightEnter();
+		const BOOLEAN go = (ReadVmcallState() == VMCALL_STATE_ACTIVE) && (g_HyperHide.LifecycleActive != 0);
+		if (go == FALSE)
+		{
+			LogInfo("hypervisor_visible skipped: driver lifecycle not active");
+			InflightLeave();
+			return;
+		}
+
 		if (value == true)
-			__vm_call(VMCALL_UNHIDE_HV_PRESENCE, 0, 0, 0);
+			SafeVmCall(VMCALL_UNHIDE_HV_PRESENCE, 0, 0, 0);
 		else
-			__vm_call(VMCALL_HIDE_HV_PRESENCE, 0, 0, 0);
+			SafeVmCall(VMCALL_HIDE_HV_PRESENCE, 0, 0, 0);
+
+		InflightLeave();
 	}
 
-	/// <summary>
-	/// Unhook all functions and invalidate tlb
-	/// </summary>
-	/// <returns> status </returns>
 	bool unhook_all_functions()
 	{
 		UnHookFunctionArgs args{ true, nullptr, __readcr3(), 0 };
@@ -122,11 +253,6 @@ namespace hv
 		return static_cast<ULONG>(args.statuses) == KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS);
 	}
 
-	/// <summary>
-	/// Unhook single function and invalidate tlb
-	/// </summary>
-	/// <param name="function_address"></param>
-	/// <returns> status </returns>
 	bool unhook_function(void* function_address)
 	{
 		UnHookFunctionArgs args{ false, function_address, __readcr3(), 0 };
@@ -135,13 +261,6 @@ namespace hv
 		return static_cast<ULONG>(args.statuses) == KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS);
 	}
 
-	/// <summary>
-	/// Hook function via ept and invalidates mappings
-	/// </summary>
-	/// <param name="target_address">Address of function which we want to hook</param>
-	/// <param name="hook_function">Address of function which is used to call original function</param>
-	/// <param name="origin_function">Address of function which is used to call original function</param>
-	/// <returns> status </returns>
 	bool hook_function(void* target_address, void* hook_function, void** origin_function)
 	{
 		HookFunctionArgs args{ target_address, hook_function, origin_function, __readcr3(), 0 };
@@ -150,30 +269,31 @@ namespace hv
 		return static_cast<ULONG>(args.statuses) == KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS);
 	}
 
-	/// <summary>
-	/// Dump info about allocated pools (Use Dbgview to see information)
-	/// </summary>
 	void dump_pool_manager()
 	{
-		__vm_call(VMCALL_DUMP_POOL_MANAGER, 0, 0, 0);
+		InflightEnter();
+		const BOOLEAN go = (ReadVmcallState() == VMCALL_STATE_ACTIVE) && (g_HyperHide.LifecycleActive != 0);
+		if (go == FALSE)
+		{
+			LogInfo("dump_pool_manager skipped: driver lifecycle not active");
+			InflightLeave();
+			return;
+		}
+
+		SafeVmCall(VMCALL_DUMP_POOL_MANAGER, 0, 0, 0);
+		InflightLeave();
 	}
 
-	/// <summary>
-	/// Check if we can communicate with hypervisor
-	/// </summary>
-	/// <returns> status </returns>
 	bool test_vmcall()
 	{
+		// Zero-init leaves VmcallState=ACTIVE so DriverEntry bootstrap DPCs can run
+		// before LifecycleActive is opened for IOCTL paths.
 		volatile SHORT statuses{};
 		KeGenericCallDpc(broadcast_test_vmcall, (PVOID)&statuses);
 
 		return static_cast<ULONG>(statuses) == KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS);
 	}
 
-	/// <summary>
-	/// Send irp with information to allocate memory
-	/// </summary>
-	/// <returns> status </returns>
 	bool send_irp_perform_allocation()
 	{
 		PDEVICE_OBJECT airhv_device_object;
@@ -189,7 +309,6 @@ namespace hv
 
 		ObReferenceObjectByPointer(airhv_device_object, FILE_ALL_ACCESS, NULL, KernelMode);
 
-		// We don't need this so we instantly dereference file object
 		ObDereferenceObject(file_object);
 
 		if (NT_SUCCESS(status) == false)

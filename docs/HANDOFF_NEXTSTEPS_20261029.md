@@ -82,6 +82,12 @@ Build:
   byteweise per SHA-256 geprüft.
 - Kein Treiber geladen, kein Dienst geändert, kein Installer ausgeführt und
   keine BCD-Einstellung auf dem Buildrechner verändert.
+- **NtQueryObjectSafety-Regressionstests: BESTANDEN (29.10.2026).**
+  `vendor/HyperHide-v5.1/tests/ntqueryobject_safety_tests.cpp` kompiliert mit
+  g++ 16.2.0 (`-std=c++17 -Wall -Wextra -O2`) ohne Warnungen (Exit 0) und
+  erfolgreich ausgeführt: `NtQueryObject safety regression tests passed`
+  (Exit 0). Details und Reproduktionsbefehl in
+  [HyperHide-v5.1-ntqueryobject-safety-20261029.md](HyperHide-v5.1-ntqueryobject-safety-20261029.md).
 
 Compilerwarnungen aus dem unveränderten v5-Bestand (C4312 und veraltetes
 `ExAllocatePoolWithTag`) sind im vollständigen Buildlog erhalten. Der neue Hook

@@ -522,17 +522,41 @@ void vmexit_exception_handler(__vcpu* vcpu)
 void vmexit_cpuid_handler(__vcpu* vcpu)
 {
 	__cpuid_info cpuid_reg = { 0 };
+	const unsigned __int64 leaf = vcpu->vmexit_info.guest_registers->rax;
+	const unsigned __int64 subleaf = vcpu->vmexit_info.guest_registers->rcx;
 
-	if (g_vmm_context->hv_presence == false &&
-		vcpu->vmexit_info.guest_registers->rax >= 0x40000000 &&
-		vcpu->vmexit_info.guest_registers->rax <= 0x4FFFFFFF)
-		__cpuidex((int*)&cpuid_reg.eax, g_vmm_context->highest_basic_leaf, 0);
+	// Hot path: serve once-cached host results for leaf 0 and the hidden HV range.
+	// Caches are independent of hv_presence; gating below still runs on every exit.
+	if (leaf == 0 && subleaf == 0)
+	{
+		cpuid_reg.eax = g_vmm_context->cpuid_leaf0_cache.eax;
+		cpuid_reg.ebx = g_vmm_context->cpuid_leaf0_cache.ebx;
+		cpuid_reg.ecx = g_vmm_context->cpuid_leaf0_cache.ecx;
+		cpuid_reg.edx = g_vmm_context->cpuid_leaf0_cache.edx;
+	}
+	else if (g_vmm_context->hv_presence == false &&
+		leaf >= 0x40000000 &&
+		leaf <= 0x4FFFFFFF)
+	{
+		cpuid_reg.eax = g_vmm_context->cpuid_hvvendor_cache.eax;
+		cpuid_reg.ebx = g_vmm_context->cpuid_hvvendor_cache.ebx;
+		cpuid_reg.ecx = g_vmm_context->cpuid_hvvendor_cache.ecx;
+		cpuid_reg.edx = g_vmm_context->cpuid_hvvendor_cache.edx;
+	}
+	else if (leaf == CPUID_HV_VENDOR_AND_MAX_FUNCTIONS)
+	{
+		// Visible path: base from cache, switch may replace with airhv branding.
+		cpuid_reg.eax = g_vmm_context->cpuid_hvvendor_cache.eax;
+		cpuid_reg.ebx = g_vmm_context->cpuid_hvvendor_cache.ebx;
+		cpuid_reg.ecx = g_vmm_context->cpuid_hvvendor_cache.ecx;
+		cpuid_reg.edx = g_vmm_context->cpuid_hvvendor_cache.edx;
+	}
+	else
+	{
+		__cpuidex((int*)&cpuid_reg.eax, (int)leaf, (int)subleaf);
+	}
 
-	else 
-		__cpuidex((int*)&cpuid_reg.eax, vcpu->vmexit_info.guest_registers->rax, vcpu->vmexit_info.guest_registers->rcx);
-
-
-	switch (vcpu->vmexit_info.guest_registers->rax)
+	switch (leaf)
 	{
 		case CPUID_PROCESSOR_FEATURES:
 			cpuid_reg.cpuid_eax_01.feature_information_ecx.hypervisor_present = g_vmm_context->hv_presence; // Hypervisor present bit
@@ -560,7 +584,7 @@ void vmexit_cpuid_handler(__vcpu* vcpu)
 			break;
 
 		case CPUID_EXTENDED_FEATURES:
-			if (vcpu->vmexit_info.guest_registers->rcx == 0)
+			if (subleaf == 0)
 				CLR_CPUID_BIT(cpuid_reg.ecx, 5); // TPAUSE UMONITOR and UWAIT are not supported
 			break;
 	}

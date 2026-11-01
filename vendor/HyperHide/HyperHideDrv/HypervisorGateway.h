@@ -12,4 +12,9 @@ namespace hv
 	bool unhook_function(unsigned __int64 function_address);
 
 	bool send_irp_perform_allocation();
+
+	// Drain in-flight DPC/direct vmcalls after VmcallState=DRAINING.
+	void wait_for_vmcall_drain();
+
+	void set_vmcall_state(LONG NewState);
 }
