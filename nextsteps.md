@@ -14,6 +14,20 @@ vorhandene Arbeitsstände und gegebenenfalls AGENTS.md beachten.
 > Kein weiterer Register-Spoof. Nächster Runtime-Schritt: v5.1 Early-Attach auf
 > der HP-Bench. Runbook und ZIPs liegen im bench-min Pack unter
 > `tools/flex-x32dbg/local-session/packages-20261029/`.
+ >
+ > Bearbeitungsstand 30.10.2026: **v5.2 KUSER_SHARED_DATA-Lifecycle ist
+ > fertiggestellt und verifiziert.** v5.2 ist jetzt die aktuelle
+ > HyperHide-Runtime für Windows 10 19045 (x64); v5.1 bleibt der
+ > dokumentierte Rollback-Zustand.
+ >
+ > - Paket: `bin/HyperHide/HyperHide-Win10-19045-x64-v5.2-kusd-lifecycle.zip`
+ > - ZIP SHA-256 `D98CACF23050A76603DA5D8D38F8F8BE4C673C410CC68BD4BC934D89B6BB3F8B`
+ > - `HyperHideDrv.sys` SHA-256
+ >   `2798C37855CA06B6FCA64B32E8794ED0E4D02F16793D0BA94369DB19EEA6E681`
+ > - alle 17 `SHA256SUMS.txt`-Einträge im entpackten Paket verifiziert
+ >   (`ALL HASHES OK`); `NtQueryObject safety regression tests passed` im Build.
+ > - Details, Provenanz-Quirk und offene Punkte:
+ >   [docs/HANDOFF_V5.2_KUSER_LIFECYCLE_20261030.md](docs/HANDOFF_V5.2_KUSER_LIFECYCLE_20261030.md).
 
 ## Umgesetzter Stand für die nächste Maschine
 

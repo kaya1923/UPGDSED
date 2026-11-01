@@ -2,6 +2,12 @@
 
 Stand: 29.10.2026
 
+> Nachtrag 30.10.2026: v5.1 bleibt der dokumentierte Rollback-Zustand, die
+> aktuelle Runtime ist jetzt v5.2 — siehe
+> [HANDOFF_V5.2_KUSER_LIFECYCLE_20261030.md](HANDOFF_V5.2_KUSER_LIFECYCLE_20261030.md)
+> (v5.2-Kompletierung, verifizierte Artefakt-Hashes, Repo-/Remote-Stand,
+> verbleibende Schritte).
+
 ## Ergebnis
 
 Prompt 1 aus `nextsteps.md` ist als isolierte v5.1-Variante umgesetzt. Das
